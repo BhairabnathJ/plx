@@ -1,5 +1,6 @@
 export const DEV_MODE_KEY = 'plannerbot.devModeEnabled'
 export const AUTH_USER_KEY = 'plannerbot.auth.user'
+export const AUTH_SESSION_KEY = 'plannerbot.auth.session'
 export const DB_GROUPS_KEY = 'plannerbot.db.groups'
 export const DB_SESSIONS_KEY = 'plannerbot.db.sessions'
 

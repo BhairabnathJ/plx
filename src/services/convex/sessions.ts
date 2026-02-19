@@ -1,79 +1,55 @@
-import { useState, useSyncExternalStore } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import type { Session, SessionStatus, CreateSessionInput } from '@/types'
-import { MOCK_SESSIONS } from '@/fixtures'
-import { DB_SESSIONS_KEY } from '@/lib/constants'
+import { useAuthSessionToken } from './auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace body with real Convex hooks. Signature stays the same.
-let sessionsStore: Session[] = (() => {
-  try {
-    const raw = localStorage.getItem(DB_SESSIONS_KEY)
-    if (raw) return JSON.parse(raw) as Session[]
-  } catch {
-    // ignore parse issues and use fixtures
-  }
-  return [...MOCK_SESSIONS]
-})()
-const listeners = new Set<() => void>()
-
-function emit() {
-  try {
-    localStorage.setItem(DB_SESSIONS_KEY, JSON.stringify(sessionsStore))
-  } catch {
-    // ignore write failures
-  }
-  listeners.forEach((l) => l())
-}
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
-
-function snapshot() {
-  return sessionsStore
-}
+type ApiAny = any
 
 export function useSessions(groupId: string): { sessions: Session[]; isLoading: boolean; error: Error | null } {
-  const allSessions = useSyncExternalStore(subscribe, snapshot, snapshot)
-  const sessions = allSessions.filter(s => s.groupId === groupId)
-  return { sessions, isLoading: false, error: null }
+  const sessionToken = useAuthSessionToken()
+  const sessions = useQuery(
+    (api as ApiAny).sessions.listByGroup,
+    sessionToken && groupId ? { sessionToken, groupId } : 'skip',
+  ) as Session[] | undefined
+
+  return {
+    sessions: sessions ?? [],
+    isLoading: !!sessionToken && sessions === undefined,
+    error: null,
+  }
 }
 
 export function useSession(sessionId: string): { session: Session | null; isLoading: boolean } {
-  const allSessions = useSyncExternalStore(subscribe, snapshot, snapshot)
-  const session = allSessions.find(s => s.id === sessionId) ?? null
-  return { session, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const session = useQuery(
+    (api as ApiAny).sessions.getById,
+    sessionToken && sessionId ? { sessionToken, sessionId } : 'skip',
+  ) as Session | null | undefined
+
+  return { session: session ?? null, isLoading: !!sessionToken && session === undefined }
 }
 
 export function useCreateSession(): {
   createSession: (input: CreateSessionInput) => Promise<string>
   isLoading: boolean
 } {
-  const [isLoading, setIsLoading] = useState(false)
+  const sessionToken = useAuthSessionToken()
+  const createMutation = useMutation((api as ApiAny).sessions.create)
+
   return {
     createSession: async (input) => {
-      setIsLoading(true)
-      await new Promise(r => setTimeout(r, 700))
-      const id = 'session-' + Date.now()
-      const now = Date.now()
-      const nextSession: Session = {
-        id,
+      if (!sessionToken) throw new Error('Not authenticated')
+      const id = await createMutation({
+        sessionToken,
         groupId: input.groupId,
         title: input.title,
-        status: 'draft',
         timeframe: input.timeframe,
         activityType: input.activityType,
         contextText: input.contextText,
-        createdBy: 'user-1',
-        createdAt: now,
-        updatedAt: now,
-      }
-      sessionsStore = [nextSession, ...sessionsStore]
-      emit()
-      setIsLoading(false)
-      return id
+      })
+      return String(id)
     },
-    isLoading,
+    isLoading: false,
   }
 }
 
@@ -81,19 +57,14 @@ export function useUpdateSessionStatus(): {
   updateStatus: (sessionId: string, status: SessionStatus) => Promise<void>
   isLoading: boolean
 } {
-  const [isLoading, setIsLoading] = useState(false)
+  const sessionToken = useAuthSessionToken()
+  const updateMutation = useMutation((api as ApiAny).sessions.updateStatus)
+
   return {
     updateStatus: async (sessionId, status) => {
-      setIsLoading(true)
-      await new Promise(r => setTimeout(r, 400))
-      sessionsStore = sessionsStore.map((session) =>
-        session.id === sessionId
-          ? { ...session, status, updatedAt: Date.now() }
-          : session,
-      )
-      emit()
-      setIsLoading(false)
+      if (!sessionToken) throw new Error('Not authenticated')
+      await updateMutation({ sessionToken, sessionId, status })
     },
-    isLoading,
+    isLoading: false,
   }
 }

@@ -8,5 +8,5 @@ export function canTransition(from: SessionStatus, to: SessionStatus): boolean {
 
 export function nextStatus(current: SessionStatus): SessionStatus {
   const idx = ORDER.indexOf(current);
-  return ORDER[Math.min(idx + 1, ORDER.length - 1)];
+  return ORDER[Math.min(idx + 1, ORDER.length - 1)] ?? "finalized";
 }

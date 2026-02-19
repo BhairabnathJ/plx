@@ -1,17 +1,20 @@
 import { useSyncExternalStore } from 'react'
-import { AUTH_USER_KEY } from '@/lib/constants'
+import { useMutation, useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { AUTH_SESSION_KEY } from '@/lib/constants'
 
-export type AuthUser = {
+type ApiAny = any
+
+type AuthUser = {
   id: string
-  email: string
-  name: string
-  createdAt: number
+  email?: string
+  username?: string
+  name?: string
 }
 
-let authUserStore: AuthUser | null = (() => {
+let sessionTokenStore: string | null = (() => {
   try {
-    const raw = localStorage.getItem(AUTH_USER_KEY)
-    return raw ? (JSON.parse(raw) as AuthUser) : null
+    return localStorage.getItem(AUTH_SESSION_KEY)
   } catch {
     return null
   }
@@ -29,45 +32,76 @@ function subscribe(listener: () => void) {
 }
 
 function snapshot() {
-  return authUserStore
+  return sessionTokenStore
 }
 
-function persist(next: AuthUser | null) {
-  authUserStore = next
+function persistToken(next: string | null) {
+  sessionTokenStore = next
   try {
     if (next) {
-      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(next))
+      localStorage.setItem(AUTH_SESSION_KEY, next)
     } else {
-      localStorage.removeItem(AUTH_USER_KEY)
+      localStorage.removeItem(AUTH_SESSION_KEY)
     }
   } catch {
-    // ignore storage write failures
+    // ignore storage issues
   }
   emit()
 }
 
-export function useAuthUser(): { user: AuthUser | null; isAuthenticated: boolean } {
-  const user = useSyncExternalStore(subscribe, snapshot, snapshot)
-  return { user, isAuthenticated: !!user }
+export function useAuthSessionToken(): string | null {
+  return useSyncExternalStore(subscribe, snapshot, snapshot)
+}
+
+export function useAuthUser(): { user: AuthUser | null; isAuthenticated: boolean; isLoading: boolean } {
+  const sessionToken = useAuthSessionToken()
+
+  const session = useQuery(
+    (api as ApiAny).authLocal.getSession,
+    sessionToken ? { sessionToken } : 'skip',
+  ) as { user: AuthUser } | null | undefined
+
+  if (sessionToken && session === null) {
+    persistToken(null)
+  }
+
+  return {
+    user: session?.user ?? null,
+    isAuthenticated: !!session?.user,
+    isLoading: sessionToken ? session === undefined : false,
+  }
 }
 
 export function useLogin(): {
-  login: (email: string) => Promise<AuthUser>
-  logout: () => void
+  register: (args: { email: string; username: string; password: string }) => Promise<{ defaultGroupId: string | null }>
+  login: (args: { identifier: string; password: string }) => Promise<{ defaultGroupId: string | null }>
+  logout: () => Promise<void>
 } {
+  const registerMutation = useMutation((api as ApiAny).authLocal.register)
+  const loginMutation = useMutation((api as ApiAny).authLocal.login)
+  const logoutMutation = useMutation((api as ApiAny).authLocal.logout)
+  const sessionToken = useAuthSessionToken()
+
   return {
-    login: async (email: string) => {
-      await new Promise((r) => setTimeout(r, 250))
-      const name = email.split('@')[0]?.replace(/[._-]/g, ' ') || 'Planner user'
-      const user: AuthUser = {
-        id: `user-${Date.now()}`,
-        email,
-        name,
-        createdAt: Date.now(),
-      }
-      persist(user)
-      return user
+    register: async ({ email, username, password }) => {
+      const result = await registerMutation({ email, username, password })
+      persistToken(result.sessionToken)
+      return { defaultGroupId: result.defaultGroupId ?? null }
     },
-    logout: () => persist(null),
+    login: async ({ identifier, password }) => {
+      const result = await loginMutation({ identifier, password })
+      persistToken(result.sessionToken)
+      return { defaultGroupId: result.defaultGroupId ?? null }
+    },
+    logout: async () => {
+      if (sessionToken) {
+        try {
+          await logoutMutation({ sessionToken })
+        } catch {
+          // still clear local token
+        }
+      }
+      persistToken(null)
+    },
   }
 }

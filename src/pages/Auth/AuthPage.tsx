@@ -1,95 +1,126 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { useLogin } from '@/services/convex/auth'
-import { useCreateGroup, useGroups } from '@/services/convex/groups'
+
+type Mode = 'signin' | 'signup'
 
 export function AuthPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const initialEmail = params.get('email') ?? ''
 
-  const [email, setEmail] = useState(initialEmail)
+  const [mode, setMode] = useState<Mode>('signin')
+  const [email, setEmail] = useState(params.get('email') ?? '')
+  const [username, setUsername] = useState('')
+  const [identifier, setIdentifier] = useState(params.get('email') ?? '')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('')
 
-  const { login } = useLogin()
-  const { groups } = useGroups()
-  const { createGroup, isLoading: creatingGroup } = useCreateGroup()
-
-  const availableGroups = useMemo(() => groups, [groups])
+  const { login, register } = useLogin()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email.trim()) return
-
+    setError(null)
     setSubmitting(true)
-    const user = await login(email.trim().toLowerCase())
 
-    let targetGroupId = selectedGroupId
-    if (!targetGroupId) {
-      targetGroupId = availableGroups[0]?.id ?? ''
+    try {
+      const result =
+        mode === 'signup'
+          ? await register({
+              email: email.trim().toLowerCase(),
+              username: username.trim().toLowerCase(),
+              password,
+            })
+          : await login({ identifier: identifier.trim().toLowerCase(), password })
+
+      const groupId = result.defaultGroupId
+      if (!groupId) {
+        setError('No group found for this account. Please create a new account.')
+        return
+      }
+      navigate(`/app/${groupId}/dashboard`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed')
+    } finally {
+      setSubmitting(false)
     }
-
-    if (!targetGroupId) {
-      targetGroupId = await createGroup({
-        name: 'My Group',
-        description: 'New PlannerBot group',
-        createdBy: user.id,
-      })
-    }
-
-    setSubmitting(false)
-    navigate(`/app/${targetGroupId}/dashboard`)
   }
 
   return (
     <div className="min-h-dvh bg-neutral-50 flex items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="card w-full max-w-md p-6 space-y-4">
         <div className="space-y-1">
-          <h1 className="text-xl font-bold text-neutral-900">Sign in</h1>
-          <p className="text-sm text-neutral-500">Log in and choose which group dashboard to open.</p>
+          <h1 className="text-xl font-bold text-neutral-900">
+            {mode === 'signin' ? 'Sign in' : 'Create account'}
+          </h1>
+          <p className="text-sm text-neutral-500">
+            {mode === 'signin'
+              ? 'Use email or username with password.'
+              : 'Create an account with email, username, and password.'}
+          </p>
         </div>
 
+        <div className="flex gap-2">
+          <Button type="button" variant={mode === 'signin' ? 'primary' : 'secondary'} size="sm" onClick={() => setMode('signin')}>
+            Sign in
+          </Button>
+          <Button type="button" variant={mode === 'signup' ? 'primary' : 'secondary'} size="sm" onClick={() => setMode('signup')}>
+            Sign up
+          </Button>
+        </div>
+
+        {mode === 'signup' ? (
+          <>
+            <Input
+              type="email"
+              label="Email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
+            <Input
+              type="text"
+              label="Username"
+              placeholder="yourname"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              autoComplete="username"
+              required
+            />
+          </>
+        ) : (
+          <Input
+            type="text"
+            label="Email or username"
+            placeholder="you@example.com or yourname"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            autoComplete="username"
+            required
+          />
+        )}
+
         <Input
-          type="email"
-          label="Email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
+          type="password"
+          label="Password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
           required
         />
 
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-neutral-700" htmlFor="group-select">
-            Open group (optional)
-          </label>
-          <select
-            id="group-select"
-            value={selectedGroupId}
-            onChange={(e) => setSelectedGroupId(e.target.value)}
-            className="w-full h-11 rounded-xl border border-neutral-300 bg-white px-3 text-sm"
-          >
-            <option value="">Auto-select first available group</option>
-            {availableGroups.map((group) => (
-              <option key={group.id} value={group.id}>
-                {group.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <Button type="submit" variant="primary" size="md" loading={submitting || creatingGroup} className="w-full">
-          Continue
+        <Button type="submit" variant="primary" size="md" loading={submitting} className="w-full">
+          {mode === 'signin' ? 'Continue' : 'Create account'}
         </Button>
 
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="w-full text-sm text-neutral-500 hover:text-neutral-700"
-        >
+        <button type="button" onClick={() => navigate('/')} className="w-full text-sm text-neutral-500 hover:text-neutral-700">
           Back
         </button>
       </form>

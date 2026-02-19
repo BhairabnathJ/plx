@@ -6,8 +6,16 @@ interface AuthGuardProps {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  const { isAuthenticated } = useAuthUser()
+  const { isAuthenticated, isLoading } = useAuthUser()
   const location = useLocation()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center text-sm text-neutral-500">
+        Checking session…
+      </div>
+    )
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace state={{ from: location.pathname }} />

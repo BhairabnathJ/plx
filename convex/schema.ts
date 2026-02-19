@@ -5,11 +5,25 @@ export default defineSchema({
   users: defineTable({
     clerkUserId: v.string(),
     email: v.optional(v.string()),
+    username: v.optional(v.string()),
+    password: v.optional(v.string()),
     name: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_clerk_user_id", ["clerkUserId"]),
+  })
+    .index("by_clerk_user_id", ["clerkUserId"])
+    .index("by_email", ["email"])
+    .index("by_username", ["username"]),
+
+  authSessions: defineTable({
+    userId: v.id("users"),
+    token: v.string(),
+    createdAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_user", ["userId"]),
 
   groups: defineTable({
     name: v.string(),
