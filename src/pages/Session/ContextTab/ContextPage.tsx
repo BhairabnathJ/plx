@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { MessageSquarePlus, Sparkles, FileText } from 'lucide-react'
+import { Sparkles, FileText } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { Textarea } from '@/components/primitives/Textarea'
 import { ErrorState } from '@/components/feedback/ErrorState'
@@ -69,7 +69,6 @@ export function ContextPage() {
           value={additionalText}
           onChange={e => setAdditionalText(e.target.value)}
           rows={4}
-          iconLeft={<MessageSquarePlus size={15} />}
         />
       </div>
 

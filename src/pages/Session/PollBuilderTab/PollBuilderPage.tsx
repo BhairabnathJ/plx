@@ -121,7 +121,6 @@ export function PollBuilderPage() {
             const options = getDimensionOptions(dim)
             const cfg = DIMENSION_CONFIG[dim]
             const limits = POLL_OPTION_LIMITS[dim]
-            const selectedCount = options.filter(o => selectedIds.has(o.id) || selectedIds.size === 0).length
             const isOverLimit = options.length > limits.max
             const isUnderLimit = options.length < limits.min
 

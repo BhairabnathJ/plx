@@ -6,7 +6,6 @@ import { usePoll, usePublishPoll } from '@/services/convex/polls'
 import { useSession } from '@/services/convex/sessions'
 import { useClipboard } from '@/hooks/useClipboard'
 import { track } from '@/lib/telemetry'
-import { cn } from '@/lib/cn'
 
 export function PollSharePage() {
   const { sessionId = '' } = useParams()

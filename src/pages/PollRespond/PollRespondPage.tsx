@@ -96,12 +96,15 @@ export function PollRespondPage() {
     )
   }
 
-  const dimensions: Array<{ dim: PollDimension; options: PollOption[] }> = [
-    { dim: 'date', options: bundle.dates },
-    { dim: 'time', options: bundle.times },
-    { dim: 'place', options: bundle.places },
-    { dim: 'before-after', options: bundle.beforeAfter },
-  ].filter(d => d.options.length > 0)
+  const dimensionEntries: Array<[PollDimension, PollOption[]]> = [
+    ['date', bundle.dates],
+    ['time', bundle.times],
+    ['place', bundle.places],
+    ['before-after', bundle.beforeAfter],
+  ]
+  const dimensions = dimensionEntries
+    .filter(([, opts]) => opts.length > 0)
+    .map(([dim, options]) => ({ dim, options }))
 
   const totalAnswered = Object.keys(votes).length
 

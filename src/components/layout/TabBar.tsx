@@ -1,5 +1,5 @@
 import { NavLink, useParams } from 'react-router-dom'
-import { LayoutDashboard, CalendarDays, BarChart2, History, Settings, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, History, Settings, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useDevMode } from '@/hooks/useDevMode'
 

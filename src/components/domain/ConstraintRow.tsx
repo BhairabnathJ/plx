@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Check, Pencil, X, MessageSquare, Sparkles, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import type { Constraint, ConstraintState, ProvenanceTag, ConfidenceLevel } from '@/types'
+import type { Constraint, ProvenanceTag, ConfidenceLevel } from '@/types'
 
 const PROVENANCE_CONFIG: Record<ProvenanceTag, { icon: React.ReactNode; label: string; color: string }> = {
   chat:   { icon: <MessageSquare size={10} />, label: 'Chat',   color: 'text-blue-500 bg-blue-50' },

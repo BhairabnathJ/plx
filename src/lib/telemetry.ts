@@ -1,5 +1,5 @@
 // UX telemetry stubs — swap bodies for real analytics (PostHog, Amplitude, etc.)
-const isDev = import.meta.env.VITE_APP_ENV === 'development'
+const isDev = import.meta.env['VITE_APP_ENV'] === 'development'
 
 function emit(event: string, props?: Record<string, unknown>) {
   if (isDev) {

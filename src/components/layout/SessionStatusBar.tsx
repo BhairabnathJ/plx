@@ -70,7 +70,7 @@ export function SessionStatusBar({ currentStatus, sessionTitle }: SessionStatusB
                 disabled={isUpcoming}
                 className={cn(
                   'flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors duration-150',
-                  isCurrent && [STATUS_BG[status], STATUS_COLORS[status], 'font-semibold'],
+                  isCurrent && `${STATUS_BG[status]} ${STATUS_COLORS[status]} font-semibold`,
                   isComplete && 'text-neutral-500 hover:text-neutral-700 cursor-pointer',
                   isUpcoming && 'text-neutral-300 cursor-not-allowed',
                 )}
