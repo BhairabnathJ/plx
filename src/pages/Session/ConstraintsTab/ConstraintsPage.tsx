@@ -7,14 +7,14 @@ import { ConstraintRow } from '@/components/domain/ConstraintRow'
 import { SkeletonCard } from '@/components/primitives/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useConstraints, useUpdateConstraint, useAddConstraint } from '@/services/convex/constraints'
-import type { ConstraintType } from '@/types'
+import type { ConstraintKind } from '@/types'
 import { track } from '@/lib/telemetry'
 import { ShieldAlert, Heart, MapPin } from 'lucide-react'
 
-const SECTIONS: Array<{ type: ConstraintType; label: string; icon: React.ReactNode; desc: string }> = [
-  { type: 'hard', label: 'Hard constraints', icon: <ShieldAlert size={15} />, desc: 'Must be respected — dealbreakers' },
-  { type: 'soft', label: 'Preferences', icon: <Heart size={15} />, desc: 'Nice to have, but flexible' },
-  { type: 'mention', label: 'Venue mentions', icon: <MapPin size={15} />, desc: 'Specific places mentioned' },
+const SECTIONS: Array<{ kind: ConstraintKind; label: string; icon: React.ReactNode; desc: string }> = [
+  { kind: 'hard', label: 'Hard constraints', icon: <ShieldAlert size={15} />, desc: 'Must be respected — dealbreakers' },
+  { kind: 'soft', label: 'Preferences', icon: <Heart size={15} />, desc: 'Nice to have, but flexible' },
+  { kind: 'mention', label: 'Venue mentions', icon: <MapPin size={15} />, desc: 'Specific places mentioned' },
 ]
 
 export function ConstraintsPage() {
@@ -23,7 +23,7 @@ export function ConstraintsPage() {
   const { updateConstraint } = useUpdateConstraint()
   const { addConstraint } = useAddConstraint()
 
-  const [addingType, setAddingType] = useState<ConstraintType | null>(null)
+  const [addingKind, setAddingKind] = useState<ConstraintKind | null>(null)
   const [newText, setNewText] = useState('')
 
   const handleAccept = async (id: string) => {
@@ -40,18 +40,18 @@ export function ConstraintsPage() {
     await updateConstraint(id, { state: 'removed' })
   }
 
-  const handleAdd = async (type: ConstraintType) => {
+  const handleAdd = async (kind: ConstraintKind) => {
     if (!newText.trim()) return
     await addConstraint({
       sessionId,
-      type,
+      kind,
       text: newText.trim(),
       state: 'accepted',
       provenance: 'manual',
       confidence: 'high',
     })
     setNewText('')
-    setAddingType(null)
+    setAddingKind(null)
   }
 
   if (isLoading) return <div className="p-6"><SkeletonCard count={3} /></div>
@@ -66,11 +66,11 @@ export function ConstraintsPage() {
       </div>
 
       {SECTIONS.map(section => {
-        const items = constraints.filter(c => c.type === section.type)
+        const items = constraints.filter(c => c.kind === section.kind)
         const visible = items.filter(c => c.state !== 'removed')
 
         return (
-          <section key={section.type} className="card p-4 space-y-3">
+          <section key={section.kind} className="card p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-primary-500" aria-hidden>{section.icon}</span>
@@ -83,13 +83,13 @@ export function ConstraintsPage() {
                 variant="ghost"
                 size="sm"
                 iconLeft={<Plus size={13} />}
-                onClick={() => setAddingType(addingType === section.type ? null : section.type)}
+                onClick={() => setAddingKind(addingKind === section.kind ? null : section.kind)}
               >
                 Add
               </Button>
             </div>
 
-            {items.length === 0 && !addingType ? (
+            {items.length === 0 && !addingKind ? (
               <EmptyState
                 title={`No ${section.label.toLowerCase()} found`}
                 description="Add one manually if needed."
@@ -109,23 +109,23 @@ export function ConstraintsPage() {
             )}
 
             {/* Add form */}
-            {addingType === section.type && (
+            {addingKind === section.kind && (
               <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
                 <Input
-                  placeholder={`Add a ${section.type === 'mention' ? 'venue mention' : section.type === 'hard' ? 'hard constraint' : 'preference'}…`}
+                  placeholder={`Add a ${section.kind === 'mention' ? 'venue mention' : section.kind === 'hard' ? 'hard constraint' : 'preference'}…`}
                   value={newText}
                   onChange={e => setNewText(e.target.value)}
                   onKeyDown={e => {
-                    if (e.key === 'Enter') handleAdd(section.type)
-                    if (e.key === 'Escape') { setAddingType(null); setNewText('') }
+                    if (e.key === 'Enter') handleAdd(section.kind)
+                    if (e.key === 'Escape') { setAddingKind(null); setNewText('') }
                   }}
                   className="flex-1"
                   autoFocus
                 />
-                <Button variant="primary" size="sm" onClick={() => handleAdd(section.type)}>
+                <Button variant="primary" size="sm" onClick={() => handleAdd(section.kind)}>
                   Add
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setAddingType(null); setNewText('') }}>
+                <Button variant="ghost" size="sm" onClick={() => { setAddingKind(null); setNewText('') }}>
                   Cancel
                 </Button>
               </div>

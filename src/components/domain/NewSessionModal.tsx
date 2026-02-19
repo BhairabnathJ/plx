@@ -21,22 +21,13 @@ export function NewSessionModal({ groupId, open, onClose }: NewSessionModalProps
 
   const [title, setTitle] = useState('')
   const [timeframe, setTimeframe] = useState<string>('this-week')
-  const [activityTypes, setActivityTypes] = useState<string[]>([])
+  const [activityType, setActivityType] = useState<string>('')
   const [contextText, setContextText] = useState('')
   const [errors, setErrors] = useState<{ title?: string; context?: string }>({})
-
-  const toggleActivity = (type: string) => {
-    setActivityTypes(prev =>
-      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
-    )
-  }
 
   const validate = () => {
     const errs: typeof errors = {}
     if (!title.trim()) errs.title = 'Session title is required'
-    if (!contextText.trim() && activityTypes.length === 0) {
-      errs.context = 'Add some context or select at least one activity type'
-    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -47,8 +38,8 @@ export function NewSessionModal({ groupId, open, onClose }: NewSessionModalProps
     const id = await createSession({
       groupId,
       title: title.trim(),
-      timeframeLabel: timeframeOption?.label ?? 'Custom',
-      activityTypes,
+      timeframe: timeframeOption?.label ?? 'Custom',
+      activityType: activityType || undefined,
       contextText: contextText.trim() || undefined,
     })
     track.sessionCreated(id)
@@ -60,7 +51,7 @@ export function NewSessionModal({ groupId, open, onClose }: NewSessionModalProps
     if (!isLoading) {
       setTitle('')
       setTimeframe('this-week')
-      setActivityTypes([])
+      setActivityType('')
       setContextText('')
       setErrors({})
       onClose()
@@ -100,7 +91,7 @@ export function NewSessionModal({ groupId, open, onClose }: NewSessionModalProps
           </div>
         </div>
 
-        {/* Activity types */}
+        {/* Activity type (single) */}
         <div className="space-y-2">
           <p className="text-sm font-medium text-neutral-700">Activity type <span className="text-neutral-400 font-normal">(optional)</span></p>
           <div className="flex flex-wrap gap-2">
@@ -108,8 +99,8 @@ export function NewSessionModal({ groupId, open, onClose }: NewSessionModalProps
               <Chip
                 key={type}
                 label={type}
-                selected={activityTypes.includes(type)}
-                onClick={() => toggleActivity(type)}
+                selected={activityType === type}
+                onClick={() => setActivityType(activityType === type ? '' : type)}
               />
             ))}
           </div>

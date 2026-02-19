@@ -2,7 +2,6 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Wand2, MessageSquareDashed } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { MessageItem } from '@/components/domain/MessageItem'
-import { ComboCard } from '@/components/domain/ComboCard'
 import { analyzeConsensus } from '@/services/api/live-chat'
 import { track } from '@/lib/telemetry'
 import type { ConsensusInsight } from '@/types'
@@ -67,10 +66,10 @@ export function LiveChatPage() {
       setMessages(prev => prev.filter(m => m.id !== loadingId))
       addMessage({
         variant: 'bot',
-        content: result.summary,
+        content: result.nextStep,
         timestamp: new Date(),
       })
-      if (result.consensusSignals.length || result.conflicts.length) {
+      if (result.consensusPoints.length || result.conflicts.length) {
         setInsight(result)
       }
     } catch {
@@ -92,7 +91,7 @@ export function LiveChatPage() {
     try {
       const result = await analyzeConsensus([])
       setMessages(prev => prev.filter(m => m.id !== loadingId))
-      addMessage({ variant: 'bot', content: result.summary, timestamp: new Date() })
+      addMessage({ variant: 'bot', content: result.nextStep, timestamp: new Date() })
       setInsight(result)
     } catch {
       setMessages(prev => prev.filter(m => m.id !== loadingId))
@@ -114,7 +113,7 @@ export function LiveChatPage() {
     setMessages(prev => prev.filter(m => m.id !== loadingId))
     addMessage({
       variant: 'bot',
-      content: 'Based on the conversation, here\'s what I\'d suggest polling on:\n\n**Dates:** Saturday Feb 22, Sunday Feb 23\n**Times:** 7:00 PM, 7:30 PM\n**Place vibe:** Silver Lake, Los Feliz\n\nWant me to create this poll in the Poll Builder?',
+      content: "Based on the conversation, here's what I'd suggest polling on:\n\n**Dates:** Saturday Feb 22, Sunday Feb 23\n**Times:** 7:00 PM, 7:30 PM\n**Place vibe:** Silver Lake, Los Feliz\n\nWant me to create this poll in the Poll Builder?",
       timestamp: new Date(),
     })
     setThinking(false)
@@ -201,10 +200,10 @@ export function LiveChatPage() {
           <div className="w-72 border-l border-neutral-200 bg-neutral-50 overflow-y-auto p-4 space-y-4 hidden lg:block">
             <h3 className="text-sm font-semibold text-neutral-700">Structured insights</h3>
 
-            {insight.consensusSignals.length > 0 && (
+            {insight.consensusPoints.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Consensus</p>
-                {insight.consensusSignals.map((s, i) => (
+                {insight.consensusPoints.map((s, i) => (
                   <div key={i} className="flex items-start gap-2 text-xs text-neutral-700">
                     <span className="text-emerald-500 mt-0.5 shrink-0">✓</span>
                     {s}
@@ -225,15 +224,10 @@ export function LiveChatPage() {
               </div>
             )}
 
-            {insight.bestCombos.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Best combo</p>
-                <ComboCard
-                  {...insight.bestCombos[0]!}
-                  variant="primary"
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-primary-700 uppercase tracking-wide">Next step</p>
+              <p className="text-xs text-neutral-600 leading-relaxed">{insight.nextStep}</p>
+            </div>
           </div>
         )}
       </div>

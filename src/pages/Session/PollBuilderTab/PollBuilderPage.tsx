@@ -17,10 +17,11 @@ const DIMENSION_CONFIG: Record<PollDimension, {
   selectionType: string
   plural: string
 }> = {
-  date: { label: 'Dates', icon: <Calendar size={16} />, selectionType: 'Multi-select', plural: 'dates' },
-  time: { label: 'Times', icon: <Clock size={16} />, selectionType: 'Multi-select', plural: 'times' },
-  place: { label: 'Place vibe', icon: <MapPin size={16} />, selectionType: 'Single choice', plural: 'places' },
-  'before-after': { label: 'Before / After', icon: <Sparkles size={16} />, selectionType: 'Multi-select', plural: 'options' },
+  date:   { label: 'Dates',        icon: <Calendar size={16} />, selectionType: 'Multi-select', plural: 'dates' },
+  time:   { label: 'Times',        icon: <Clock size={16} />,    selectionType: 'Multi-select', plural: 'times' },
+  place:  { label: 'Place vibe',   icon: <MapPin size={16} />,   selectionType: 'Single choice', plural: 'places' },
+  before: { label: 'Before',       icon: <Sparkles size={16} />, selectionType: 'Multi-select', plural: 'options' },
+  after:  { label: 'After',        icon: <Sparkles size={16} />, selectionType: 'Multi-select', plural: 'options' },
 }
 
 export function PollBuilderPage() {
@@ -39,10 +40,11 @@ export function PollBuilderPage() {
   const getDimensionOptions = (dim: PollDimension): PollOption[] => {
     if (!bundle) return []
     const map: Record<PollDimension, PollOption[]> = {
-      date: bundle.dates,
-      time: bundle.times,
-      place: bundle.places,
-      'before-after': bundle.beforeAfter,
+      date:   bundle.dates,
+      time:   bundle.times,
+      place:  bundle.places,
+      before: bundle.before,
+      after:  bundle.after,
     }
     return map[dim] ?? []
   }
@@ -62,8 +64,8 @@ export function PollBuilderPage() {
       pollId: bundle.pollId,
       dimension: dim,
       label: newOptionLabel.trim(),
-      selectionType: dim === 'place' ? 'single' : 'multi',
-      sortOrder: 999,
+      rank: 999,
+      isActive: true,
     })
     setNewOptionLabel('')
     setAddingDimension(null)
@@ -75,7 +77,7 @@ export function PollBuilderPage() {
     setGenerating(false)
   }
 
-  const dimensions: PollDimension[] = ['date', 'time', 'place', 'before-after']
+  const dimensions: PollDimension[] = ['date', 'time', 'place', 'before', 'after']
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
@@ -185,7 +187,7 @@ export function PollBuilderPage() {
                 {addingDimension === dim && (
                   <div className="flex items-center gap-2 pt-2 border-t border-neutral-100">
                     <Input
-                      placeholder={`New ${dim === 'date' ? 'date' : dim === 'time' ? 'time' : dim === 'place' ? 'place vibe' : 'option'}…`}
+                      placeholder={`New ${dim === 'date' ? 'date' : dim === 'time' ? 'time' : dim === 'place' ? 'place vibe' : dim === 'before' ? 'before activity' : 'after activity'}…`}
                       value={newOptionLabel}
                       onChange={e => setNewOptionLabel(e.target.value)}
                       onKeyDown={e => {

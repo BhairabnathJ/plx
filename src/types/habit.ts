@@ -1,11 +1,15 @@
+import type { ConfidenceLevel } from './constraint'
+
+export type { ConfidenceLevel }
+
 export interface HabitProfile {
   id: string
   groupId: string
-  commonDays: string[]
-  commonTimeWindows: string[]
-  commonAreas: string[]
-  leadTimePattern: string
-  turnoutPattern: string
-  computedAt: number
-  overrides?: Partial<HabitProfile>
+  preferredDays: string[]
+  preferredTimeWindows: string[]
+  preferredAreas: string[]
+  preferredVibes: string[]
+  avgTurnout?: number
+  confidence: ConfidenceLevel
+  updatedAt: number
 }

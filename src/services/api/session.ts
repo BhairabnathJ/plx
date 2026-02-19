@@ -12,13 +12,13 @@ export async function analyzeSession(
   return {
     sessionId: _sessionId,
     hardConstraints: MOCK_CONSTRAINTS
-      .filter(c => c.type === 'hard')
+      .filter(c => c.kind === 'hard')
       .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
     softPreferences: MOCK_CONSTRAINTS
-      .filter(c => c.type === 'soft')
+      .filter(c => c.kind === 'soft')
       .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
     mentions: MOCK_CONSTRAINTS
-      .filter(c => c.type === 'mention')
+      .filter(c => c.kind === 'mention')
       .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
     rawConfidence: 0.82,
   }

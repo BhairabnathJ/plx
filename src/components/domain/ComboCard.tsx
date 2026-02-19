@@ -1,14 +1,18 @@
-import { Calendar, Clock, MapPin, Star, Users } from 'lucide-react'
+import { Calendar, Clock, MapPin, Star, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import type { BestComboResult } from '@/types'
 import { ProgressBar } from '@/components/primitives/ProgressBar'
 import { Button } from '@/components/primitives/Button'
 import { percentToLabel } from '@/lib/formatting'
 
 type ComboVariant = 'primary' | 'backup' | 'low-confidence'
 
-interface ComboCardProps extends BestComboResult {
+export interface ComboCardProps {
   variant: ComboVariant
+  rank: number
+  date?: string
+  time?: string
+  place?: string
+  score: number
   onSelect?: () => void
 }
 
@@ -40,11 +44,7 @@ export function ComboCard({
   date,
   time,
   place,
-  beforeAfter,
-  voterCoverage,
-  rankingReason,
-  supportCount,
-  totalVoters,
+  score,
   onSelect,
 }: ComboCardProps) {
   const cfg = VARIANT_CONFIG[variant]
@@ -66,47 +66,45 @@ export function ComboCard({
           </span>
         </div>
         <div className="flex items-center gap-1 text-xs text-neutral-500">
-          <Users size={12} aria-hidden />
-          <span aria-label={`${supportCount} of ${totalVoters} voters`}>
-            {supportCount}/{totalVoters}
+          <TrendingUp size={12} aria-hidden />
+          <span aria-label={`Score: ${Math.round(score * 100)}%`}>
+            {Math.round(score * 100)}%
           </span>
         </div>
       </div>
 
       {/* Details */}
       <div className="space-y-1.5">
-        <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
-          <Calendar size={14} className="text-neutral-400 shrink-0" aria-hidden />
-          {date}
-        </div>
-        <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
-          <Clock size={14} className="text-neutral-400 shrink-0" aria-hidden />
-          {time}
-        </div>
-        <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
-          <MapPin size={14} className="text-neutral-400 shrink-0" aria-hidden />
-          {place}
-        </div>
-        {beforeAfter && (
-          <div className="text-sm text-neutral-600 pl-[22px]">{beforeAfter}</div>
+        {date && (
+          <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
+            <Calendar size={14} className="text-neutral-400 shrink-0" aria-hidden />
+            {date}
+          </div>
+        )}
+        {time && (
+          <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
+            <Clock size={14} className="text-neutral-400 shrink-0" aria-hidden />
+            {time}
+          </div>
+        )}
+        {place && (
+          <div className="flex items-center gap-2 text-sm font-medium text-neutral-800">
+            <MapPin size={14} className="text-neutral-400 shrink-0" aria-hidden />
+            {place}
+          </div>
         )}
       </div>
 
-      {/* Coverage bar */}
+      {/* Score bar */}
       <div>
         <ProgressBar
-          value={voterCoverage * 100}
-          label={`${percentToLabel(voterCoverage)} voter coverage`}
+          value={score * 100}
+          label={`${percentToLabel(score)} consensus score`}
           showValue
-          variant={voterCoverage >= 0.7 ? 'success' : voterCoverage >= 0.5 ? 'default' : 'warning'}
+          variant={score >= 0.7 ? 'success' : score >= 0.5 ? 'default' : 'warning'}
           size="sm"
         />
       </div>
-
-      {/* Reasoning */}
-      <p className="text-xs text-neutral-500 leading-relaxed italic">
-        {rankingReason}
-      </p>
 
       {/* Action */}
       {onSelect && (

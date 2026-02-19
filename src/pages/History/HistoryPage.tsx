@@ -27,20 +27,22 @@ export function HistoryPage() {
             Group trends
           </div>
           <div className="flex flex-wrap gap-2">
-            {profile.commonDays.map(d => (
+            {profile.preferredDays.map(d => (
               <TrendChip key={d} icon={<Calendar size={12} />} label={d} />
             ))}
-            {profile.commonTimeWindows.map(t => (
+            {profile.preferredTimeWindows.map(t => (
               <TrendChip key={t} icon={<Calendar size={12} />} label={t} />
             ))}
-            {profile.commonAreas.map(a => (
+            {profile.preferredAreas.map(a => (
               <TrendChip key={a} icon={<MapPin size={12} />} label={a} />
             ))}
           </div>
-          <p className="text-xs text-neutral-500 flex items-center gap-1">
-            <Users size={12} aria-hidden />
-            {profile.turnoutPattern}
-          </p>
+          {profile.avgTurnout != null && (
+            <p className="text-xs text-neutral-500 flex items-center gap-1">
+              <Users size={12} aria-hidden />
+              Avg turnout: {Math.round(profile.avgTurnout * 100)}%
+            </p>
+          )}
         </div>
       )}
 
@@ -61,11 +63,11 @@ export function HistoryPage() {
               <div key={s.id} className="card p-4 flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <p className="text-sm font-semibold text-neutral-900">{s.title}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {s.activityTypes.map(t => (
-                      <span key={t} className="text-xs px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded font-medium">{t}</span>
-                    ))}
-                  </div>
+                  {s.activityType && (
+                    <div className="flex flex-wrap gap-1">
+                      <span className="text-xs px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded font-medium">{s.activityType}</span>
+                    </div>
+                  )}
                   <p className="text-xs text-neutral-400">{formatRelative(s.updatedAt)}</p>
                 </div>
                 <div className="flex flex-col items-end gap-2">
@@ -91,7 +93,7 @@ export function HistoryPage() {
               <div key={s.id} className="card p-3.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-neutral-800 truncate">{s.title}</p>
-                  <p className="text-xs text-neutral-400">{s.timeframeLabel}</p>
+                  <p className="text-xs text-neutral-400">{s.timeframe}</p>
                 </div>
                 <SessionStatusBadge status={s.status} />
               </div>

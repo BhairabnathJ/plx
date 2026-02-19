@@ -12,6 +12,8 @@ We'll grab dessert after 🍦
 **Going:** Alex, Sam, Jordan, Morgan (Taylor still TBD)
 
 Reply here if anything changes. See you Saturday! 🙌`,
-  tone: 'friendly',
-  generatedAt: Date.now() - 3600000,
+  model: 'meta-llama/llama-3.3-70b-instruct:free',
+  createdBy: 'user-1',
+  createdAt: Date.now() - 3600000,
+  updatedAt: Date.now() - 3600000,
 }

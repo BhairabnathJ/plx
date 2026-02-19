@@ -4,7 +4,7 @@ import { EmptyState } from '@/components/feedback/EmptyState'
 import { VoteBadge } from '@/components/domain/VoteBadge'
 import { ComboCard } from '@/components/domain/ComboCard'
 import { ProgressBar } from '@/components/primitives/ProgressBar'
-import { useVoteMatrix, useBestCombos } from '@/services/convex/votes'
+import { useVoteTallies, useBestCombos } from '@/services/convex/votes'
 import { usePoll } from '@/services/convex/polls'
 import { BarChart2, Users, Trophy } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -12,10 +12,10 @@ import { cn } from '@/lib/cn'
 export function VotesPage() {
   const { sessionId = '' } = useParams()
   const { poll } = usePoll(sessionId)
-  const { matrix, isLoading: matrixLoading } = useVoteMatrix(poll?.id ?? '')
-  const { combos, isLoading: combosLoading } = useBestCombos(poll?.id ?? '')
+  const { tallies, totalVoters, respondedVoters, isLoading: talliesLoading } = useVoteTallies(poll?.id ?? '')
+  const { combo, isLoading: comboLoading } = useBestCombos(poll?.id ?? '')
 
-  const isLoading = matrixLoading || combosLoading
+  const isLoading = talliesLoading || comboLoading
 
   if (isLoading) return <div className="p-6"><SkeletonCard count={3} /></div>
 
@@ -40,39 +40,48 @@ export function VotesPage() {
         </div>
 
         {/* Quorum indicator */}
-        {matrix && (
-          <div className="text-right">
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-700">
-              <Users size={15} aria-hidden />
-              {matrix.respondedVoters}/{matrix.totalVoters} responded
-            </div>
-            <ProgressBar
-              value={matrix.respondedVoters}
-              max={matrix.totalVoters}
-              variant={matrix.respondedVoters >= matrix.totalVoters * 0.7 ? 'success' : 'default'}
-              size="sm"
-              className="mt-1 w-28"
-            />
+        <div className="text-right">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-neutral-700">
+            <Users size={15} aria-hidden />
+            {respondedVoters}/{totalVoters} responded
           </div>
-        )}
+          <ProgressBar
+            value={respondedVoters}
+            max={totalVoters}
+            variant={respondedVoters >= totalVoters * 0.7 ? 'success' : 'default'}
+            size="sm"
+            className="mt-1 w-28"
+          />
+        </div>
       </div>
 
       {/* Best combo section */}
-      {combos.length > 0 && (
+      {combo && (
         <section>
           <h3 className="text-sm font-semibold text-neutral-700 mb-3 flex items-center gap-2">
             <Trophy size={15} className="text-amber-500" aria-hidden />
             Recommended combinations
           </h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            {combos.map((combo, i) => (
+            <ComboCard
+              variant="primary"
+              rank={1}
+              date={combo.primary.date}
+              time={combo.primary.time}
+              place={combo.primary.place}
+              score={combo.primary.score}
+              onSelect={() => {}}
+            />
+            {combo.backups.map((backup, i) => (
               <ComboCard
                 key={i}
-                {...combo}
-                variant={i === 0 ? 'primary' : combo.voterCoverage < 0.5 ? 'low-confidence' : 'backup'}
-                onSelect={() => {
-                  // Navigate to finalize with this combo pre-filled
-                }}
+                variant={backup.score < 0.5 ? 'low-confidence' : 'backup'}
+                rank={i + 2}
+                date={backup.date}
+                time={backup.time}
+                place={backup.place}
+                score={backup.score}
+                onSelect={() => {}}
               />
             ))}
           </div>
@@ -80,15 +89,15 @@ export function VotesPage() {
       )}
 
       {/* Tally breakdown */}
-      {matrix && (
+      {tallies.length > 0 && (
         <section>
           <h3 className="text-sm font-semibold text-neutral-700 mb-3 flex items-center gap-2">
             <BarChart2 size={15} aria-hidden />
             Full tally
           </h3>
           <div className="card divide-y divide-neutral-100">
-            {matrix.tallies.map(tally => (
-              <TallyRow key={tally.optionId} tally={tally} totalVoters={matrix.totalVoters} />
+            {tallies.map(tally => (
+              <TallyRow key={tally.optionId} tally={tally} totalVoters={totalVoters} />
             ))}
           </div>
         </section>

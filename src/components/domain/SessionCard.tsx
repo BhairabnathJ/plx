@@ -42,26 +42,23 @@ export function SessionCard({ session, className }: SessionCardProps) {
       </div>
 
       <div className="flex items-center gap-3 text-xs text-neutral-500">
-        <span className="flex items-center gap-1">
-          <CalendarDays size={12} aria-hidden />
-          {session.timeframeLabel}
-        </span>
+        {session.timeframe && (
+          <span className="flex items-center gap-1">
+            <CalendarDays size={12} aria-hidden />
+            {session.timeframe}
+          </span>
+        )}
         <span className="flex items-center gap-1">
           <Clock size={12} aria-hidden />
           {formatRelative(session.updatedAt)}
         </span>
       </div>
 
-      {session.activityTypes.length > 0 && (
+      {session.activityType && (
         <div className="flex flex-wrap gap-1">
-          {session.activityTypes.map(type => (
-            <span
-              key={type}
-              className="px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded text-xs font-medium"
-            >
-              {type}
-            </span>
-          ))}
+          <span className="px-2 py-0.5 bg-neutral-100 text-neutral-600 rounded text-xs font-medium">
+            {session.activityType}
+          </span>
         </div>
       )}
     </button>

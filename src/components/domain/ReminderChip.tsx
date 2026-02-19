@@ -1,16 +1,16 @@
 import { Bell, BellOff } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import type { ReminderState } from '@/types'
+import type { ReminderMode } from '@/types'
 import { formatTimezone } from '@/lib/formatting'
 
 interface ReminderChipProps {
-  state: ReminderState
+  state: ReminderMode
   timezone: string
-  onStateChange: (state: ReminderState) => void
+  onStateChange: (state: ReminderMode) => void
   disabled?: boolean
 }
 
-const OPTIONS: Array<{ value: ReminderState; label: string }> = [
+const OPTIONS: Array<{ value: ReminderMode; label: string }> = [
   { value: 'off', label: 'Off' },
   { value: 'day-before', label: 'Day before' },
   { value: 'same-day', label: 'Same day' },

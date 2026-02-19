@@ -19,7 +19,7 @@ export function SummaryPage() {
   const { saveDraft, isLoading: saving } = useSaveSummaryDraft()
   const { copy, copied } = useClipboard()
 
-  const [text, setText] = useState(summary?.editedText ?? summary?.draftText ?? '')
+  const [text, setText] = useState(summary?.finalText ?? summary?.draftText ?? '')
   const [tone, setTone] = useState<TonePreset>(summary?.tone ?? 'friendly')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,8 +27,8 @@ export function SummaryPage() {
 
   useEffect(() => {
     if (summary) {
-      setText(summary.editedText ?? summary.draftText)
-      setTone(summary.tone)
+      setText(summary.finalText ?? summary.draftText)
+      setTone(summary.tone ?? 'friendly')
     }
   }, [summary])
 
@@ -37,7 +37,7 @@ export function SummaryPage() {
     setError(null)
     try {
       const result = await generateSummary(sessionId, tone)
-      setText(result.draftText)
+      setText(result.text)
       track.summaryGenerated(sessionId)
     } catch {
       setError('Failed to generate summary. Try again or edit manually.')

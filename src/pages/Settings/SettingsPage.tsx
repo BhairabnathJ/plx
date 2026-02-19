@@ -10,7 +10,7 @@ export function SettingsPage() {
   const { groupId = 'group-1' } = useParams()
   const { group } = useGroup(groupId)
 
-  const [displayName, setDisplayName] = useState(CURRENT_USER.displayName)
+  const [displayName, setDisplayName] = useState(CURRENT_USER.name ?? '')
   const [groupName, setGroupName] = useState(group?.name ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)

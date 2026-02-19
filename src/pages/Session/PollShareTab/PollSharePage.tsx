@@ -17,7 +17,7 @@ export function PollSharePage() {
 
   const [pollUrl, setPollUrl] = useState<string | null>(
     poll?.status === 'published'
-      ? `${window.location.origin}/app/group-1/polls/${poll.id}?token=${poll.shareToken}`
+      ? `${window.location.origin}/app/group-1/polls/${poll.id}?token=${poll.publishToken}`
       : null
   )
 

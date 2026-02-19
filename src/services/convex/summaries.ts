@@ -10,7 +10,7 @@ export function useSummary(sessionId: string): { summary: Summary | null; isLoad
 }
 
 export function useUpdateSummary(): {
-  updateSummary: (id: string, updates: { editedText?: string; tone?: TonePreset }) => Promise<void>
+  updateSummary: (id: string, updates: { finalText?: string; tone?: TonePreset }) => Promise<void>
 } {
   return {
     updateSummary: async () => { await new Promise(r => setTimeout(r, 300)) },

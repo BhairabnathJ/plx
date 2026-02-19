@@ -1,6 +1,5 @@
 import type { Constraint } from './constraint'
 import type { PollOptionBundle } from './poll'
-import type { BestComboResult } from './vote'
 
 export interface ConstraintExtractionResult {
   sessionId: string
@@ -13,19 +12,12 @@ export interface ConstraintExtractionResult {
 export type { PollOptionBundle }
 
 export interface SummaryGenerationResult {
-  draftText: string
-  tokens: {
-    date?: string
-    time?: string
-    place?: string
-    attendance?: string
-  }
+  text: string
+  model: string
 }
 
 export interface ConsensusInsight {
-  consensusSignals: string[]
+  consensusPoints: string[]
   conflicts: string[]
-  suggestedPollOptions: PollOptionBundle
-  summary: string
-  bestCombos: BestComboResult[]
+  nextStep: string
 }

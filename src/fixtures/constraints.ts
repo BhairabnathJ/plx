@@ -5,7 +5,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-1',
     sessionId: 'session-1',
-    type: 'hard',
+    kind: 'hard',
     text: 'Not before 7pm',
     state: 'accepted',
     provenance: 'chat',
@@ -14,7 +14,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-2',
     sessionId: 'session-1',
-    type: 'hard',
+    kind: 'hard',
     text: 'Not Koreatown',
     state: 'accepted',
     provenance: 'chat',
@@ -23,7 +23,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-3',
     sessionId: 'session-1',
-    type: 'hard',
+    kind: 'hard',
     text: 'No Italian food',
     state: 'accepted',
     provenance: 'chat',
@@ -33,7 +33,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-4',
     sessionId: 'session-1',
-    type: 'soft',
+    kind: 'soft',
     text: 'Prefer Silver Lake area',
     state: 'accepted',
     provenance: 'chat',
@@ -42,7 +42,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-5',
     sessionId: 'session-1',
-    type: 'soft',
+    kind: 'soft',
     text: 'Weekend evenings work best for most',
     state: 'accepted',
     provenance: 'habit',
@@ -51,7 +51,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-6',
     sessionId: 'session-1',
-    type: 'soft',
+    kind: 'soft',
     text: 'Group prefers casual atmosphere',
     state: 'detected',
     provenance: 'habit',
@@ -61,7 +61,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-7',
     sessionId: 'session-1',
-    type: 'mention',
+    kind: 'mention',
     text: 'New place on Sunset Blvd',
     state: 'detected',
     provenance: 'chat',
@@ -70,7 +70,7 @@ export const MOCK_CONSTRAINTS: Constraint[] = [
   {
     id: 'c-8',
     sessionId: 'session-1',
-    type: 'mention',
+    kind: 'mention',
     text: 'Sqirl (morning option)',
     state: 'detected',
     provenance: 'chat',

@@ -6,8 +6,8 @@ export interface Session {
   groupId: string
   title: string
   status: SessionStatus
-  timeframeLabel: string
-  activityTypes: string[]
+  timeframe?: string
+  activityType?: string
   contextText?: string
   createdBy: string
   createdAt: number
@@ -18,14 +18,15 @@ export interface SessionMessage {
   id: string
   sessionId: string
   content: string
-  source: 'pasted' | 'typed'
-  addedAt: number
+  source: 'manual' | 'whatsapp'
+  createdBy: string
+  createdAt: number
 }
 
 export interface CreateSessionInput {
   groupId: string
   title: string
-  timeframeLabel: string
-  activityTypes: string[]
+  timeframe?: string
+  activityType?: string
   contextText?: string
 }

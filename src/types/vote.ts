@@ -4,10 +4,9 @@ export interface Vote {
   id: string
   pollId: string
   pollOptionId: string
-  voterId?: string
-  voterToken: string
-  value: VoteType
-  submittedAt: number
+  voterName: string
+  voterUserId?: string
+  createdAt: number
 }
 
 export interface VoteTally {
@@ -21,20 +20,11 @@ export interface VoteTally {
 }
 
 export interface VoteMatrix {
-  pollId: string
-  tallies: VoteTally[]
-  totalVoters: number
-  respondedVoters: number
+  participant: string
+  selectedOptionIds: string[]
 }
 
 export interface BestComboResult {
-  rank: number
-  date: string
-  time: string
-  place: string
-  beforeAfter?: string
-  voterCoverage: number
-  rankingReason: string
-  supportCount: number
-  totalVoters: number
+  primary: { date?: string; time?: string; place?: string; score: number }
+  backups: Array<{ date?: string; time?: string; place?: string; score: number }>
 }

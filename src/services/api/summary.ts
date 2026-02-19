@@ -9,12 +9,7 @@ export async function generateSummary(
 ): Promise<SummaryGenerationResult> {
   await new Promise(r => setTimeout(r, 1500))
   return {
-    draftText: MOCK_SUMMARY.draftText,
-    tokens: {
-      date: 'Saturday Feb 22',
-      time: '7:30 PM',
-      place: 'Trendy Silver Lake spot',
-      attendance: '4 of 7 going',
-    },
+    text: MOCK_SUMMARY.draftText,
+    model: MOCK_SUMMARY.model ?? 'meta-llama/llama-3.3-70b-instruct:free',
   }
 }

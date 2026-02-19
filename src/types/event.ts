@@ -1,30 +1,30 @@
-export type AttendanceState = 'going' | 'maybe' | 'unknown'
-export type ReminderState = 'off' | 'day-before' | 'same-day' | 'custom'
+export type EventStatus = 'draft' | 'locked'
+export type ReminderMode = 'off' | 'day-before' | 'same-day' | 'custom'
 
 export interface ReminderPolicy {
-  state: ReminderState
-  customTime?: number
-  timezone: string
+  mode: ReminderMode
+  customMinutesBefore?: number
 }
 
 export interface Event {
   id: string
   sessionId: string
-  venueName: string
-  mapLink?: string
-  finalDate: string
-  finalTime: string
-  finalizedAt: number
-  finalizedBy: string
-  reminderPolicy: ReminderPolicy
+  title: string
+  whenIso: string
+  venueName?: string
+  mapUrl?: string
+  status: EventStatus
+  createdBy: string
+  createdAt: number
+  updatedAt: number
+  reminderPolicy?: ReminderPolicy
 }
 
 export interface AttendanceSnapshot {
   id: string
   eventId: string
-  userId: string
-  state: AttendanceState
-  recordedAt: number
-  displayName?: string
-  avatarUrl?: string
+  goingCount: number
+  maybeCount: number
+  noResponseCount: number
+  capturedAt: number
 }

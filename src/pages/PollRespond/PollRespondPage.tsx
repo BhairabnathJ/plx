@@ -12,10 +12,11 @@ import { cn } from '@/lib/cn'
 import { Calendar, Clock, MapPin, Sparkles } from 'lucide-react'
 
 const DIMENSION_CONFIG: Record<PollDimension, { label: string; icon: React.ReactNode; isMulti: boolean }> = {
-  date:         { label: 'Which dates work?', icon: <Calendar size={18} />, isMulti: true },
-  time:         { label: 'What time works?', icon: <Clock size={18} />, isMulti: true },
-  place:        { label: 'What vibe are you feeling?', icon: <MapPin size={18} />, isMulti: false },
-  'before-after': { label: 'Any add-ons?', icon: <Sparkles size={18} />, isMulti: true },
+  date:   { label: 'Which dates work?',       icon: <Calendar size={18} />, isMulti: true },
+  time:   { label: 'What time works?',        icon: <Clock size={18} />,    isMulti: true },
+  place:  { label: 'What vibe are you feeling?', icon: <MapPin size={18} />, isMulti: false },
+  before: { label: 'Meet up before?',         icon: <Sparkles size={18} />, isMulti: true },
+  after:  { label: 'Any add-ons after?',      icon: <Sparkles size={18} />, isMulti: true },
 }
 
 export function PollRespondPage() {
@@ -44,7 +45,7 @@ export function PollRespondPage() {
       } else {
         // For single-select: clear all options in same dimension, then set
         if (bundle) {
-          const dimOptions = getAllOptionsForDimension(bundle.places)
+          const dimOptions = bundle.places
           dimOptions.forEach(o => { if (o.id !== optionId) delete next[o.id] })
         }
         if (next[optionId] === value) {
@@ -56,8 +57,6 @@ export function PollRespondPage() {
       return next
     })
   }
-
-  const getAllOptionsForDimension = (opts: PollOption[]) => opts
 
   const handleSubmit = async () => {
     if (!poll) return
@@ -100,7 +99,8 @@ export function PollRespondPage() {
     ['date', bundle.dates],
     ['time', bundle.times],
     ['place', bundle.places],
-    ['before-after', bundle.beforeAfter],
+    ['before', bundle.before],
+    ['after', bundle.after],
   ]
   const dimensions = dimensionEntries
     .filter(([, opts]) => opts.length > 0)

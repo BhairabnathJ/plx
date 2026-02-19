@@ -1,55 +1,65 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { CheckCircle2, MapPin, Calendar, Clock } from 'lucide-react'
+import { CheckCircle2, MapPin, Calendar, Clock, Users } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { ReminderChip } from '@/components/domain/ReminderChip'
-import { useEvent, useAttendance, useFinalizeEvent } from '@/services/convex/events'
+import { useEvent, useAttendanceSnapshot, useFinalizeEvent } from '@/services/convex/events'
 import { useSession, useUpdateSessionStatus } from '@/services/convex/sessions'
 import { useBestCombos } from '@/services/convex/votes'
 import { usePoll } from '@/services/convex/polls'
 import { track } from '@/lib/telemetry'
-import type { ReminderState, AttendanceState } from '@/types'
-import { cn } from '@/lib/cn'
-
-const ATTENDANCE_CONFIG: Record<AttendanceState, { label: string; color: string }> = {
-  going:   { label: 'Going ✓', color: 'bg-emerald-50 border-emerald-300 text-emerald-700' },
-  maybe:   { label: 'Maybe', color: 'bg-amber-50 border-amber-300 text-amber-700' },
-  unknown: { label: 'TBD', color: 'bg-neutral-100 border-neutral-300 text-neutral-500' },
-}
+import type { ReminderMode } from '@/types'
 
 export function FinalizePage() {
   const { sessionId = '' } = useParams()
   const { session } = useSession(sessionId)
   const { event } = useEvent(sessionId)
   const { poll } = usePoll(sessionId)
-  const { combos } = useBestCombos(poll?.id ?? '')
-  const { attendance } = useAttendance(event?.id ?? '')
+  const { combo } = useBestCombos(poll?.id ?? '')
+  const { snapshot } = useAttendanceSnapshot(event?.id ?? '')
   const { finalizeEvent, isLoading: finalizing } = useFinalizeEvent()
   const { updateStatus } = useUpdateSessionStatus()
 
-  const topCombo = combos[0]
+  const topCombo = combo?.primary
+
+  // Parse whenIso into separate date/time for form display
+  const parseWhenIso = (iso: string) => {
+    try {
+      const d = new Date(iso)
+      const date = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      return { date, time }
+    } catch {
+      return { date: '', time: '' }
+    }
+  }
+
+  const eventParsed = event?.whenIso ? parseWhenIso(event.whenIso) : null
 
   const [venueName, setVenueName] = useState(event?.venueName ?? '')
-  const [mapLink, setMapLink] = useState(event?.mapLink ?? '')
-  const [date, setDate] = useState(event?.finalDate ?? topCombo?.date ?? '')
-  const [time, setTime] = useState(event?.finalTime ?? topCombo?.time ?? '')
-  const [reminderState, setReminderState] = useState<ReminderState>(event?.reminderPolicy?.state ?? 'day-before')
+  const [mapUrl, setMapUrl] = useState(event?.mapUrl ?? '')
+  const [date, setDate] = useState(eventParsed?.date ?? topCombo?.date ?? '')
+  const [time, setTime] = useState(eventParsed?.time ?? topCombo?.time ?? '')
+  const [eventTitle, setEventTitle] = useState(event?.title ?? session?.title ?? '')
+  const [reminderMode, setReminderMode] = useState<ReminderMode>(event?.reminderPolicy?.mode ?? 'day-before')
   const [finalized, setFinalized] = useState(session?.status === 'finalized')
 
   const handleFinalize = async () => {
     if (!venueName.trim() || !date || !time) return
 
+    // Combine date + time into a simple ISO-ish string for the stub
+    const whenIso = `${date}T${time}`
+
     const id = await finalizeEvent({
       sessionId,
+      title: eventTitle.trim() || session?.title || 'Event',
+      whenIso,
       venueName: venueName.trim(),
-      mapLink: mapLink.trim() || undefined,
-      finalDate: date,
-      finalTime: time,
-      reminderPolicy: {
-        state: reminderState,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      },
+      mapUrl: mapUrl.trim() || undefined,
+      status: 'locked',
+      createdBy: 'user-1',
+      reminderPolicy: { mode: reminderMode },
     })
     await updateStatus(sessionId, 'finalized')
     track.eventFinalized(id)
@@ -67,21 +77,25 @@ export function FinalizePage() {
             <h2 className="text-xl font-bold text-neutral-900">Event finalized! 🎉</h2>
             <p className="text-sm text-neutral-500 mt-1">{event?.venueName ?? venueName}</p>
             <p className="text-sm font-semibold text-neutral-800 mt-2">
-              {event?.finalDate ?? date} at {event?.finalTime ?? time}
+              {eventParsed?.date ?? date} at {eventParsed?.time ?? time}
             </p>
           </div>
-          {attendance.length > 0 && (
-            <div className="w-full space-y-2">
-              <p className="text-sm font-medium text-neutral-600">Attendance</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {attendance.map(a => {
-                  const cfg = ATTENDANCE_CONFIG[a.state]
-                  return (
-                    <span key={a.id} className={cn('px-3 py-1 rounded-pill border text-sm font-medium', cfg.color)}>
-                      {a.displayName ?? 'Member'} — {cfg.label}
-                    </span>
-                  )
-                })}
+          {snapshot && (
+            <div className="w-full">
+              <p className="text-sm font-medium text-neutral-600 mb-3">Attendance</p>
+              <div className="flex justify-center gap-4">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-emerald-600">{snapshot.goingCount}</p>
+                  <p className="text-xs text-neutral-500">Going</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-amber-500">{snapshot.maybeCount}</p>
+                  <p className="text-xs text-neutral-500">Maybe</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-neutral-400">{snapshot.noResponseCount}</p>
+                  <p className="text-xs text-neutral-500">No response</p>
+                </div>
               </div>
             </div>
           )}
@@ -105,7 +119,9 @@ export function FinalizePage() {
           <div className="h-5 w-5 rounded-full bg-primary-500 flex items-center justify-center text-white text-xs shrink-0 mt-0.5">★</div>
           <div>
             <p className="text-sm font-semibold text-primary-800">Pre-filled from top combo</p>
-            <p className="text-xs text-primary-600">{topCombo.date} · {topCombo.time} · {topCombo.place}</p>
+            <p className="text-xs text-primary-600">
+              {[topCombo.date, topCombo.time, topCombo.place].filter(Boolean).join(' · ')}
+            </p>
           </div>
         </div>
       )}
@@ -113,6 +129,12 @@ export function FinalizePage() {
       {/* Event details */}
       <div className="card p-4 space-y-4">
         <h3 className="text-sm font-semibold text-neutral-700">Event details</h3>
+        <Input
+          label="Event title"
+          value={eventTitle}
+          onChange={e => setEventTitle(e.target.value)}
+          placeholder="Saturday Dinner Plans"
+        />
         <div className="grid sm:grid-cols-2 gap-3">
           <Input
             label="Date"
@@ -138,29 +160,33 @@ export function FinalizePage() {
         />
         <Input
           label="Map link (optional)"
-          value={mapLink}
-          onChange={e => setMapLink(e.target.value)}
+          value={mapUrl}
+          onChange={e => setMapUrl(e.target.value)}
           placeholder="https://maps.google.com/..."
           hint="Makes it easy for attendees to navigate"
         />
       </div>
 
-      {/* Attendance */}
-      {attendance.length > 0 && (
+      {/* Attendance snapshot */}
+      {snapshot && (
         <div className="card p-4 space-y-3">
-          <h3 className="text-sm font-semibold text-neutral-700">Attendance</h3>
-          <div className="space-y-2">
-            {attendance.map(a => {
-              const cfg = ATTENDANCE_CONFIG[a.state]
-              return (
-                <div key={a.id} className="flex items-center justify-between">
-                  <span className="text-sm text-neutral-700">{a.displayName ?? 'Member'}</span>
-                  <span className={cn('px-2.5 py-0.5 rounded-pill border text-xs font-medium', cfg.color)}>
-                    {cfg.label}
-                  </span>
-                </div>
-              )
-            })}
+          <h3 className="text-sm font-semibold text-neutral-700 flex items-center gap-2">
+            <Users size={15} aria-hidden />
+            Attendance so far
+          </h3>
+          <div className="flex gap-4">
+            <div className="text-center">
+              <p className="text-xl font-bold text-emerald-600">{snapshot.goingCount}</p>
+              <p className="text-xs text-neutral-500">Going</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-amber-500">{snapshot.maybeCount}</p>
+              <p className="text-xs text-neutral-500">Maybe</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xl font-bold text-neutral-400">{snapshot.noResponseCount}</p>
+              <p className="text-xs text-neutral-500">No response</p>
+            </div>
           </div>
         </div>
       )}
@@ -168,9 +194,9 @@ export function FinalizePage() {
       {/* Reminder */}
       <div className="card p-4">
         <ReminderChip
-          state={reminderState}
+          state={reminderMode}
           timezone={Intl.DateTimeFormat().resolvedOptions().timeZone}
-          onStateChange={setReminderState}
+          onStateChange={setReminderMode}
         />
       </div>
 

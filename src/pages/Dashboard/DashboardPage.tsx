@@ -62,12 +62,12 @@ export function DashboardPage() {
             Group habits
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <HabitStat label="Best days" value={profile.commonDays.slice(0, 2).join(', ')} />
-            <HabitStat label="Best times" value={profile.commonTimeWindows[0] ?? '—'} />
-            <HabitStat label="Top areas" value={profile.commonAreas.slice(0, 2).join(', ')} />
-            <HabitStat label="Typical turnout" value={profile.turnoutPattern} />
+            <HabitStat label="Best days" value={profile.preferredDays.slice(0, 2).join(', ')} />
+            <HabitStat label="Best times" value={profile.preferredTimeWindows[0] ?? '—'} />
+            <HabitStat label="Top areas" value={profile.preferredAreas.slice(0, 2).join(', ')} />
+            <HabitStat label="Avg turnout" value={profile.avgTurnout != null ? `${Math.round(profile.avgTurnout * 100)}%` : '—'} />
           </div>
-          <p className="text-xs text-neutral-400">{profile.leadTimePattern}</p>
+          <p className="text-xs text-neutral-400">Confidence: {profile.confidence}</p>
         </div>
       )}
 
