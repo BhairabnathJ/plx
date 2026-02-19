@@ -1,12 +1,26 @@
 import { useState, useSyncExternalStore } from 'react'
 import type { Session, SessionStatus, CreateSessionInput } from '@/types'
 import { MOCK_SESSIONS } from '@/fixtures'
+import { DB_SESSIONS_KEY } from '@/lib/constants'
 
 // STUB: Replace body with real Convex hooks. Signature stays the same.
-let sessionsStore: Session[] = [...MOCK_SESSIONS]
+let sessionsStore: Session[] = (() => {
+  try {
+    const raw = localStorage.getItem(DB_SESSIONS_KEY)
+    if (raw) return JSON.parse(raw) as Session[]
+  } catch {
+    // ignore parse issues and use fixtures
+  }
+  return [...MOCK_SESSIONS]
+})()
 const listeners = new Set<() => void>()
 
 function emit() {
+  try {
+    localStorage.setItem(DB_SESSIONS_KEY, JSON.stringify(sessionsStore))
+  } catch {
+    // ignore write failures
+  }
   listeners.forEach((l) => l())
 }
 

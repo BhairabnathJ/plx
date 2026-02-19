@@ -57,6 +57,19 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_session", ["sessionId"]),
 
+  chats: defineTable({
+    groupId: v.id("groups"),
+    sessionId: v.optional(v.id("sessions")),
+    authorName: v.string(),
+    authorUserId: v.optional(v.id("users")),
+    message: v.string(),
+    source: v.union(v.literal("manual"), v.literal("whatsapp"), v.literal("web")),
+    createdAt: v.number(),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_session", ["sessionId"])
+    .index("by_group_created_at", ["groupId", "createdAt"]),
+
   constraints: defineTable({
     sessionId: v.id("sessions"),
     kind: v.union(v.literal("hard"), v.literal("soft"), v.literal("mention")),

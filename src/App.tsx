@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
+import { AuthGuard } from '@/components/layout/AuthGuard'
 import { PublicShell } from '@/components/layout/PublicShell'
 import { SessionShell } from '@/components/layout/SessionShell'
 import { DevModeGuard } from '@/components/layout/DevModeGuard'
@@ -25,7 +26,11 @@ const router = createBrowserRouter([
   },
   {
     path: '/app/:groupId',
-    element: <AppShell />,
+    element: (
+      <AuthGuard>
+        <AppShell />
+      </AuthGuard>
+    ),
     children: [
       {
         index: true,

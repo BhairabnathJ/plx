@@ -1,11 +1,15 @@
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Settings, User } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useGroup } from '@/services/convex/groups'
+import { useAuthUser, useLogin } from '@/services/convex/auth'
 
 export function TopNav() {
+  const navigate = useNavigate()
   const { groupId = 'group-1' } = useParams()
   const { group } = useGroup(groupId)
+  const { user } = useAuthUser()
+  const { logout } = useLogin()
 
   return (
     <header className="h-nav border-b border-neutral-200 bg-white/90 backdrop-blur-sm flex items-center px-4 gap-3 sticky top-0 z-30">
@@ -48,9 +52,20 @@ export function TopNav() {
         <button
           type="button"
           aria-label="Profile"
+          title={user ? `Sign out ${user.email}` : 'Profile'}
+          onClick={() => {
+            logout()
+            navigate('/')
+          }}
           className="h-9 w-9 flex items-center justify-center rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors duration-150"
         >
-          <User size={18} />
+          {user?.name ? (
+            <span className="text-xs font-semibold uppercase">
+              {user.name.slice(0, 1)}
+            </span>
+          ) : (
+            <User size={18} />
+          )}
         </button>
       </nav>
     </header>

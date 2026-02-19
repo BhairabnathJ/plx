@@ -11,6 +11,7 @@
 import type * as contracts_llm from "../contracts/llm.js";
 import type * as contracts_types from "../contracts/types.js";
 import type * as features_auth_onboarding from "../features/auth_onboarding.js";
+import type * as features_chats from "../features/chats.js";
 import type * as features_constraint_extraction_review from "../features/constraint_extraction_review.js";
 import type * as features_event_finalize_reminders from "../features/event_finalize_reminders.js";
 import type * as features_group_habits_profile_learning from "../features/group_habits_profile_learning.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   "contracts/llm": typeof contracts_llm;
   "contracts/types": typeof contracts_types;
   "features/auth_onboarding": typeof features_auth_onboarding;
+  "features/chats": typeof features_chats;
   "features/constraint_extraction_review": typeof features_constraint_extraction_review;
   "features/event_finalize_reminders": typeof features_event_finalize_reminders;
   "features/group_habits_profile_learning": typeof features_group_habits_profile_learning;
