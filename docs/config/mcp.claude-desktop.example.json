@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "context7Remote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.context7.com/mcp"]
+    },
+    "context7Local": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp", "--api-key", "${CONTEXT7_API_KEY}"]
+    },
+    "figmaRemote": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.figma.com/mcp"]
+    },
+    "figmaDesktop": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://127.0.0.1:3845/mcp"]
+    }
+  }
+}

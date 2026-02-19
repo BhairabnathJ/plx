@@ -1,0 +1,15 @@
+# Example Codex MCP configuration snippet.
+# Merge into ~/.codex/config.toml under your project or global scope.
+
+[mcp_servers.context7_remote]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.context7_local]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp", "--api-key", "${CONTEXT7_API_KEY}"]
+
+[mcp_servers.figma_remote]
+url = "https://mcp.figma.com/mcp"
+
+[mcp_servers.figma_desktop]
+url = "http://127.0.0.1:3845/mcp"

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "plannerbot-openrouter-config",
+  "version": 1,
+  "baseUrl": "https://openrouter.ai/api/v1",
+  "endpoint": "/chat/completions",
+  "auth": {
+    "apiKeyEnv": "OPENROUTER_API_KEY",
+    "requiredHeaders": {
+      "HTTP-Referer": "${OPENROUTER_APP_URL}",
+      "X-Title": "PlannerBot"
+    }
+  },
+  "defaults": {
+    "primaryModel": "meta-llama/llama-3.3-70b-instruct:free",
+    "temperature": 0.2,
+    "maxTokens": 2000,
+    "topP": 0.9,
+    "timeoutMs": 30000,
+    "maxContextTokens": 128000
+  },
+  "routing": {
+    "retryPolicy": {
+      "maxAttempts": 2,
+      "backoffMs": [500, 1500],
+      "retryOn": ["timeout", "rate_limit", "provider_unavailable", "5xx"]
+    },
+    "fallbackModels": [
+      "meta-llama/llama-3.3-70b-instruct",
+      "openai/gpt-4o-mini"
+    ],
+    "degradeMode": "manual_review_required"
+  },
+  "tasks": {
+    "constraintExtraction": {
+      "responseFormat": "json_schema",
+      "schemaName": "ConstraintExtractionResult"
+    },
+    "pollOptionGeneration": {
+      "responseFormat": "json_schema",
+      "schemaName": "PollOptionBundle"
+    },
+    "summaryGeneration": {
+      "responseFormat": "json_schema",
+      "schemaName": "SummaryMessageDraft"
+    },
+    "consensusAnalysis": {
+      "responseFormat": "json_schema",
+      "schemaName": "ConsensusInsight"
+    }
+  },
+  "validation": {
+    "strictJsonParsing": true,
+    "repairPassEnabled": true,
+    "rejectOnSchemaMismatch": true,
+    "maxRepairAttempts": 1
+  },
+  "safety": {
+    "piiRedactionBeforeModel": false,
+    "storeRawPrompts": true,
+    "storeRawResponses": true
+  },
+  "observability": {
+    "logPromptHash": true,
+    "logLatencyMs": true,
+    "logTokenUsage": true,
+    "logModelRoute": true
+  }
+}
