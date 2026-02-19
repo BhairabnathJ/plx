@@ -11,6 +11,7 @@ let devModeValue = (() => {
 })()
 
 const subscribers = new Set<() => void>()
+let listenersBound = false
 
 function publish(next: boolean) {
   devModeValue = next
@@ -31,32 +32,39 @@ function getSnapshot() {
   return devModeValue
 }
 
+function bindGlobalListeners() {
+  if (listenersBound) return
+  listenersBound = true
+
+  const keyHandler = (e: KeyboardEvent) => {
+    const key = e.key.toLowerCase()
+    const isToggleKey = key === 'd' || key === 'k'
+    const hasModifier = e.metaKey || e.ctrlKey
+    if (hasModifier && e.shiftKey && isToggleKey) {
+      e.preventDefault()
+      const next = !devModeValue
+      publish(next)
+      track.devModeToggled(next)
+    }
+  }
+
+  const storageHandler = (event: StorageEvent) => {
+    if (event.key === DEV_MODE_KEY) {
+      publish(event.newValue === 'true')
+    }
+  }
+
+  window.addEventListener('keydown', keyHandler)
+  window.addEventListener('storage', storageHandler)
+}
+
 export function useDevMode() {
   const devModeEnabled = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const isToggleKey = e.key.toLowerCase() === 'd'
-      const hasModifier = e.metaKey || e.ctrlKey
-      if (hasModifier && e.shiftKey && isToggleKey) {
-        e.preventDefault()
-        const next = !devModeValue
-        publish(next)
-        track.devModeToggled(next)
-      }
-    }
-
-    const storageHandler = (event: StorageEvent) => {
-      if (event.key === DEV_MODE_KEY) {
-        publish(event.newValue === 'true')
-      }
-    }
-
-    window.addEventListener('keydown', handler)
-    window.addEventListener('storage', storageHandler)
+    bindGlobalListeners()
     return () => {
-      window.removeEventListener('keydown', handler)
-      window.removeEventListener('storage', storageHandler)
+      // Keep global listeners bound for app lifetime.
     }
   }, [])
 
