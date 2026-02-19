@@ -1,0 +1,8 @@
+export interface User {
+  id: string
+  email?: string
+  phone?: string
+  displayName: string
+  avatarUrl?: string
+  createdAt: number
+}
