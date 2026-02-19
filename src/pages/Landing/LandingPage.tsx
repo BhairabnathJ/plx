@@ -3,21 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, MessageCircle, Users, Zap } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
-import { useLogin } from '@/services/convex/auth'
 
 export function LandingPage() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const { login } = useLogin()
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim()) return
-    setSubmitting(true)
-    await login(email.trim().toLowerCase())
-    setSubmitting(false)
-    navigate('/app/group-1/dashboard')
+    navigate(`/auth?email=${encodeURIComponent(email.trim().toLowerCase())}`)
   }
 
   const features = [
@@ -48,10 +42,7 @@ export function LandingPage() {
         </div>
         <button
           type="button"
-          onClick={async () => {
-            await login('demo@plannerbot.app')
-            navigate('/app/group-1/dashboard')
-          }}
+          onClick={() => navigate('/auth')}
           className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
         >
           Sign in
@@ -94,7 +85,6 @@ export function LandingPage() {
               type="submit"
               variant="primary"
               size="md"
-              loading={submitting}
               iconRight={<ArrowRight size={16} />}
             >
               Get started
@@ -108,10 +98,7 @@ export function LandingPage() {
         {/* Demo bypass */}
         <button
           type="button"
-          onClick={async () => {
-            await login('demo@plannerbot.app')
-            navigate('/app/group-1/dashboard')
-          }}
+          onClick={() => navigate('/auth')}
           className="mt-4 text-sm text-neutral-400 hover:text-neutral-600 underline underline-offset-2 transition-colors"
         >
           Preview the app →

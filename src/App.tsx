@@ -5,6 +5,7 @@ import { PublicShell } from '@/components/layout/PublicShell'
 import { SessionShell } from '@/components/layout/SessionShell'
 import { DevModeGuard } from '@/components/layout/DevModeGuard'
 import { LandingPage } from '@/pages/Landing/LandingPage'
+import { AuthPage } from '@/pages/Auth/AuthPage'
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage'
 import { SessionsPage } from '@/pages/Sessions/SessionsPage'
 import { ContextPage } from '@/pages/Session/ContextTab/ContextPage'
@@ -23,6 +24,10 @@ const router = createBrowserRouter([
   {
     path: '/',
     element: <LandingPage />,
+  },
+  {
+    path: '/auth',
+    element: <AuthPage />,
   },
   {
     path: '/app/:groupId',
