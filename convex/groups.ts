@@ -75,3 +75,28 @@ export const create = mutation({
     return groupId;
   },
 });
+
+export const getById = query({
+  args: {
+    sessionToken: v.string(),
+    groupId: v.id("groups"),
+  },
+  handler: async (ctx, args) => {
+    await resolveUserId(ctx, args.sessionToken);
+    const group = await ctx.db.get(args.groupId);
+    if (!group) return null;
+    const count = await ctx.db
+      .query("groupMembers")
+      .withIndex("by_group", (q) => q.eq("groupId", group._id))
+      .collect();
+    return {
+      id: group._id,
+      name: group.name,
+      description: group.description,
+      imageUrl: group.imageUrl,
+      createdBy: group.createdBy,
+      createdAt: group.createdAt,
+      memberCount: count.length,
+    };
+  },
+});

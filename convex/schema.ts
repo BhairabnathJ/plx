@@ -103,12 +103,30 @@ export default defineSchema({
   polls: defineTable({
     sessionId: v.id("sessions"),
     publishToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.number()),
     status: v.union(v.literal("draft"), v.literal("published"), v.literal("closed")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_session", ["sessionId"])
     .index("by_publish_token", ["publishToken"]),
+
+  voteRateLimits: defineTable({
+    pollId: v.id("polls"),
+    voterKey: v.string(),
+    attempts: v.number(),
+    windowStart: v.number(),
+  })
+    .index("by_poll_voter", ["pollId", "voterKey"]),
+
+  voteRevisions: defineTable({
+    pollId: v.id("polls"),
+    voterName: v.string(),
+    selectedOptionIds: v.array(v.string()),
+    revisedAt: v.number(),
+    revision: v.number(),
+  })
+    .index("by_poll_voter", ["pollId", "voterName"]),
 
   pollOptions: defineTable({
     pollId: v.id("polls"),
@@ -175,4 +193,38 @@ export default defineSchema({
     confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     updatedAt: v.number(),
   }).index("by_group", ["groupId"]),
+
+  reminders: defineTable({
+    eventId: v.id("events"),
+    userId: v.id("users"),
+    mode: v.union(
+      v.literal("off"),
+      v.literal("day-before"),
+      v.literal("same-day"),
+      v.literal("custom"),
+    ),
+    customMinutesBefore: v.optional(v.number()),
+    scheduledAt: v.optional(v.number()),
+    sentAt: v.optional(v.number()),
+    status: v.union(v.literal("pending"), v.literal("sent"), v.literal("cancelled")),
+    createdAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"])
+    .index("by_status_scheduled", ["status", "scheduledAt"]),
+
+  notificationPrefs: defineTable({
+    userId: v.id("users"),
+    reminders: v.boolean(),
+    pollVotes: v.boolean(),
+    sessionFinalized: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  summaryVersions: defineTable({
+    sessionId: v.id("sessions"),
+    summaryId: v.id("summaries"),
+    versionNumber: v.number(),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
 });

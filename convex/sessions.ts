@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { assertTransition } from "./lib/sessionMachine";
 
 async function resolveUserId(ctx: any, token: string) {
   const session = await ctx.db
@@ -114,10 +115,59 @@ export const updateStatus = mutation({
   },
   handler: async (ctx, args) => {
     await resolveUserId(ctx, args.sessionToken);
+    const current = await ctx.db.get(args.sessionId);
+    if (!current) throw new Error("Session not found");
+
+    // Enforce valid state machine transitions (audit ID: 59)
+    assertTransition(current.status, args.status);
+
     await ctx.db.patch(args.sessionId, {
       status: args.status,
       updatedAt: Date.now(),
     });
     return { ok: true };
+  },
+});
+
+export const listByGroupFiltered = query({
+  args: {
+    sessionToken: v.string(),
+    groupId: v.id("groups"),
+    status: v.optional(
+      v.union(
+        v.literal("draft"),
+        v.literal("analyzed"),
+        v.literal("polling"),
+        v.literal("summarized"),
+        v.literal("finalized"),
+      ),
+    ),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await resolveUserId(ctx, args.sessionToken);
+    let q = ctx.db
+      .query("sessions")
+      .withIndex("by_group_status", (q) =>
+        args.status
+          ? q.eq("groupId", args.groupId).eq("status", args.status)
+          : q.eq("groupId", args.groupId),
+      )
+      .order("desc");
+
+    const limit = Math.min(args.limit ?? 20, 100);
+    const rows = await q.take(limit);
+
+    return rows.map((s) => ({
+      id: s._id,
+      groupId: s.groupId,
+      title: s.title,
+      status: s.status,
+      timeframe: s.timeframe,
+      activityType: s.activityType,
+      createdBy: s.createdBy,
+      createdAt: s.createdAt,
+      updatedAt: s.updatedAt,
+    }));
   },
 });
