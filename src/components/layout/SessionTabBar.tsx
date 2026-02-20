@@ -2,6 +2,7 @@ import { NavLink, useParams } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 const SESSION_TABS = [
+  { path: 'overview', label: 'Overview' },
   { path: 'context', label: 'Context' },
   { path: 'constraints', label: 'Constraints' },
   { path: 'poll-builder', label: 'Poll Builder' },
