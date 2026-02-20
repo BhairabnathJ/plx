@@ -12,9 +12,12 @@ export type PollOptionBundle = {
   after: string[];
 };
 
+export type SummaryTone = "friendly" | "default" | "concise";
+
 export type SummaryMessageDraft = {
   text: string;
   model: string;
+  tone: SummaryTone;
 };
 
 export type ConsensusInsight = {

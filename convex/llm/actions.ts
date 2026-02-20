@@ -8,6 +8,7 @@ import {
   type SummaryMessageDraft,
 } from "../contracts/llm";
 import { callOpenRouterJSON } from "./openrouter";
+import { logLLMCall, buildLLMRecord } from "../lib/observability";
 
 function requireApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
@@ -45,15 +46,22 @@ export const extractConstraints = action({
     sessionText: v.string(),
   },
   handler: async (ctx, args): Promise<ConstraintExtractionResult> => {
-    const result = await callOpenRouterJSON<ConstraintExtractionResult>({
-      apiKey: requireApiKey(),
-      systemPrompt:
-        "You are a planning assistant. Extract scheduling constraints from group chat text. " +
-        "Return JSON: {hard:[{text}],soft:[{text}],mentions:[{text}]}. " +
-        "hard = must-have constraints, soft = preferences, mentions = relevant mentions.",
-      userPrompt: args.sessionText,
-      retries: 2,
-    });
+    let result;
+    try {
+      result = await callOpenRouterJSON<ConstraintExtractionResult>({
+        apiKey: requireApiKey(),
+        systemPrompt:
+          "You are a planning assistant. Extract scheduling constraints from group chat text. " +
+          "Return JSON: {hard:[{text}],soft:[{text}],mentions:[{text}]}. " +
+          "hard = must-have constraints, soft = preferences, mentions = relevant mentions.",
+        userPrompt: args.sessionText,
+        retries: 2,
+      });
+    } catch (err) {
+      logLLMCall(buildLLMRecord("extractConstraints", null, err as Error));
+      throw err;
+    }
+    logLLMCall(buildLLMRecord("extractConstraints", result));
 
     // Persist constraints to DB via internal mutation
     await ctx.runMutation(internal.features.constraint_extraction_review.saveExtracted, {
@@ -77,16 +85,23 @@ export const generatePollOptions = action({
     summaryContext: v.string(),
   },
   handler: async (ctx, args): Promise<PollOptionBundle> => {
-    const raw = await callOpenRouterJSON<Record<string, unknown>>({
-      apiKey: requireApiKey(),
-      systemPrompt:
-        "Generate compact planning poll options based on the planning context. " +
-        "Return JSON with keys: dates, times, places, before, after. " +
-        "Each key maps to an array of strings (max 5 per key). " +
-        "Example: {dates:[\"Saturday June 14\"],times:[\"7pm\"],places:[\"Central Park\"],before:[\"Dinner\"],after:[\"Drinks\"]}",
-      userPrompt: args.summaryContext,
-      retries: 2,
-    });
+    let raw;
+    try {
+      raw = await callOpenRouterJSON<Record<string, unknown>>({
+        apiKey: requireApiKey(),
+        systemPrompt:
+          "Generate compact planning poll options based on the planning context. " +
+          "Return JSON with keys: dates, times, places, before, after. " +
+          "Each key maps to an array of strings (max 5 per key). " +
+          "Example: {dates:[\"Saturday June 14\"],times:[\"7pm\"],places:[\"Central Park\"],before:[\"Dinner\"],after:[\"Drinks\"]}",
+        userPrompt: args.summaryContext,
+        retries: 2,
+      });
+    } catch (err) {
+      logLLMCall(buildLLMRecord("generatePollOptions", null, err as Error));
+      throw err;
+    }
+    logLLMCall(buildLLMRecord("generatePollOptions", raw));
 
     const bundle: PollOptionBundle = {
       dates: assertArray(raw.data.dates ?? [], "dates"),
@@ -126,14 +141,21 @@ export const generateSummaryDraft = action({
           ? "Be brief and direct. No filler."
           : "Use a neutral, clear tone.";
 
-    const result = await callOpenRouterJSON<{ text: string }>({
-      apiKey: requireApiKey(),
-      systemPrompt:
-        `Write a planning summary for a group chat based on voting results. ${toneInstruction} ` +
-        "Return JSON: {text: string}",
-      userPrompt: args.voteSummary,
-      retries: 2,
-    });
+    let result;
+    try {
+      result = await callOpenRouterJSON<{ text: string }>({
+        apiKey: requireApiKey(),
+        systemPrompt:
+          `Write a planning summary for a group chat based on voting results. ${toneInstruction} ` +
+          "Return JSON: {text: string}",
+        userPrompt: args.voteSummary,
+        retries: 2,
+      });
+    } catch (err) {
+      logLLMCall(buildLLMRecord("generateSummaryDraft", null, err as Error));
+      throw err;
+    }
+    logLLMCall(buildLLMRecord("generateSummaryDraft", result));
 
     if (typeof result.data.text !== "string" || !result.data.text.trim()) {
       throw new Error("LLM summary returned empty or invalid text");
@@ -142,6 +164,7 @@ export const generateSummaryDraft = action({
     const draft: SummaryMessageDraft = {
       text: result.data.text,
       model: result.model,
+      tone: args.tone ?? "default",
     };
 
     // Persist the draft
@@ -163,14 +186,21 @@ export const analyzeLiveChatConsensus = action({
     recentMessages: v.string(),
   },
   handler: async (_ctx, args): Promise<ConsensusInsight> => {
-    const result = await callOpenRouterJSON<ConsensusInsight>({
-      apiKey: requireApiKey(),
-      systemPrompt:
-        "Analyze recent planning chat messages for consensus and conflicts. " +
-        "Return JSON: {consensusPoints:string[],conflicts:string[],nextStep:string}",
-      userPrompt: args.recentMessages,
-      retries: 1,
-    });
+    let result;
+    try {
+      result = await callOpenRouterJSON<ConsensusInsight>({
+        apiKey: requireApiKey(),
+        systemPrompt:
+          "Analyze recent planning chat messages for consensus and conflicts. " +
+          "Return JSON: {consensusPoints:string[],conflicts:string[],nextStep:string}",
+        userPrompt: args.recentMessages,
+        retries: 1,
+      });
+    } catch (err) {
+      logLLMCall(buildLLMRecord("analyzeLiveChatConsensus", null, err as Error));
+      throw err;
+    }
+    logLLMCall(buildLLMRecord("analyzeLiveChatConsensus", result));
 
     if (!Array.isArray(result.data.consensusPoints)) {
       result.data.consensusPoints = [];
