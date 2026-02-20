@@ -103,12 +103,30 @@ export default defineSchema({
   polls: defineTable({
     sessionId: v.id("sessions"),
     publishToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.number()),
     status: v.union(v.literal("draft"), v.literal("published"), v.literal("closed")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_session", ["sessionId"])
     .index("by_publish_token", ["publishToken"]),
+
+  voteRateLimits: defineTable({
+    pollId: v.id("polls"),
+    voterKey: v.string(),
+    attempts: v.number(),
+    windowStart: v.number(),
+  })
+    .index("by_poll_voter", ["pollId", "voterKey"]),
+
+  voteRevisions: defineTable({
+    pollId: v.id("polls"),
+    voterName: v.string(),
+    selectedOptionIds: v.array(v.string()),
+    revisedAt: v.number(),
+    revision: v.number(),
+  })
+    .index("by_poll_voter", ["pollId", "voterName"]),
 
   pollOptions: defineTable({
     pollId: v.id("polls"),
