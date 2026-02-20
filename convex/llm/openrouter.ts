@@ -1,14 +1,16 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // Only free models are permitted — no paid-model fallback allowed
-const FREE_MODELS = [
-  "meta-llama/llama-3.3-70b-instruct:free",
+const PRIMARY_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const FALLBACK_MODELS = [
+  "meta-llama/llama-3.1-8b-instruct:free",
   "mistralai/mistral-7b-instruct:free",
-  "google/gemma-2-9b-it:free",
 ];
-const DEFAULT_MODEL = FREE_MODELS[0]!;
+const FREE_MODELS = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+const DEFAULT_MODEL = PRIMARY_MODEL;
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
+type HttpError = Error & { status?: number };
 
 export type OpenRouterResult<T> = {
   data: T;
@@ -38,11 +40,31 @@ function pickFreeModel(model?: string): string {
   return DEFAULT_MODEL;
 }
 
-export async function callOpenRouterJSON<T>(
+function buildModelRoute(requestedModel?: string): string[] {
+  const preferred = pickFreeModel(requestedModel);
+  return [preferred, ...FALLBACK_MODELS].filter(
+    (model, index, arr) => arr.indexOf(model) === index,
+  );
+}
+
+function isRetryable(error: Error): boolean {
+  const httpError = error as HttpError;
+  if (httpError.status === 429) return true;
+  if (httpError.status === 404) return true;
+  if ((httpError.status ?? 0) >= 500) return true;
+
+  const message = error.message.toLowerCase();
+  if (message.includes("fetch failed")) return true;
+  if (message.includes("timed out")) return true;
+  if (message.includes("temporarily")) return true;
+  return false;
+}
+
+async function callSingleModel<T>(
   args: OpenRouterCallArgs,
+  model: string,
+  retries: number,
 ): Promise<OpenRouterResult<T>> {
-  const retries = args.retries ?? 1;
-  const model = pickFreeModel(args.model);
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
@@ -72,7 +94,11 @@ export async function callOpenRouterJSON<T>(
 
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        throw new Error(`OpenRouter HTTP ${res.status}: ${body.slice(0, 200)}`);
+        const error = new Error(
+          `OpenRouter HTTP ${res.status}: ${body.slice(0, 200)}`,
+        ) as HttpError;
+        error.status = res.status;
+        throw error;
       }
 
       const payload = (await res.json()) as {
@@ -107,10 +133,38 @@ export async function callOpenRouterJSON<T>(
       if (attempt < retries) {
         const backoff = 400 * Math.pow(2, attempt);
         console.warn(
-          `[openrouter] Attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${backoff}ms.`,
+          `[openrouter] Model ${model} attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${backoff}ms.`,
         );
         await new Promise((resolve) => setTimeout(resolve, backoff));
       }
+    }
+  }
+
+  throw lastError ?? new Error(`OpenRouter call failed for model ${model}`);
+}
+
+export async function callOpenRouterJSON<T>(
+  args: OpenRouterCallArgs,
+): Promise<OpenRouterResult<T>> {
+  // retries=1 means 2 attempts/model (attempt 1 + 1 retry)
+  const retries = args.retries ?? 1;
+  const route = buildModelRoute(args.model);
+  let lastError: Error | null = null;
+
+  for (let i = 0; i < route.length; i += 1) {
+    const model = route[i]!;
+    try {
+      return await callSingleModel<T>(args, model, retries);
+    } catch (error) {
+      lastError = error as Error;
+      const hasFallback = i < route.length - 1;
+      if (hasFallback && isRetryable(lastError)) {
+        console.warn(
+          `[openrouter] Model ${model} exhausted with retryable failure: ${lastError.message}. Falling back to ${route[i + 1]}.`,
+        );
+        continue;
+      }
+      throw lastError;
     }
   }
 
