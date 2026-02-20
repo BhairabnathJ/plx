@@ -22,7 +22,7 @@ const DIMENSION_CONFIG: Record<PollDimension, { label: string; icon: React.React
 export function PollRespondPage() {
   const { pollId = '' } = useParams()
   const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') ?? 'abc123xyz'
+  const token = searchParams.get('token') ?? ''
 
   const { poll, isLoading: pollLoading } = usePollByToken(token)
   const { bundle, isLoading: optionsLoading } = usePollOptions(poll?.id ?? pollId)
@@ -30,10 +30,11 @@ export function PollRespondPage() {
 
   const [votes, setVotes] = useState<Record<string, VoteType>>({})
   const [submitted, setSubmitted] = useState(false)
+  const [hasSubmittedOnce, setHasSubmittedOnce] = useState(false)
 
   const isLoading = pollLoading || optionsLoading
 
-  const toggleVote = (optionId: string, value: VoteType, isMulti: boolean) => {
+  const toggleVote = (optionId: string, value: VoteType, isMulti: boolean, dimensionOptionIds: string[]) => {
     setVotes(prev => {
       const next = { ...prev }
       if (isMulti) {
@@ -43,11 +44,10 @@ export function PollRespondPage() {
           next[optionId] = value
         }
       } else {
-        // For single-select: clear all options in same dimension, then set
-        if (bundle) {
-          const dimOptions = bundle.places
-          dimOptions.forEach(o => { if (o.id !== optionId) delete next[o.id] })
-        }
+        // For single-select: clear all options in this dimension.
+        dimensionOptionIds.forEach((id) => {
+          if (id !== optionId) delete next[id]
+        })
         if (next[optionId] === value) {
           delete next[optionId]
         } else {
@@ -62,10 +62,20 @@ export function PollRespondPage() {
     if (!poll) return
     await submitVote(poll.id, votes)
     track.voteSubmitted(poll.id)
+    setHasSubmittedOnce(true)
     setSubmitted(true)
   }
 
   if (isLoading) return <SkeletonCard count={3} className="my-4" />
+
+  if (!token) {
+    return (
+      <ErrorState
+        title="Missing poll token"
+        description="This poll link is incomplete. Open the full URL with the token parameter."
+      />
+    )
+  }
 
   if (!poll || !bundle) {
     return (
@@ -103,8 +113,8 @@ export function PollRespondPage() {
     ['after', bundle.after],
   ]
   const dimensions = dimensionEntries
-    .filter(([, opts]) => opts.length > 0)
-    .map(([dim, options]) => ({ dim, options }))
+    .map(([dim, options]) => ({ dim, options: options.filter((option) => option.isActive) }))
+    .filter((entry) => entry.options.length > 0)
 
   const totalAnswered = Object.keys(votes).length
 
@@ -114,6 +124,11 @@ export function PollRespondPage() {
       <div className="text-center">
         <h1 className="text-xl font-bold text-neutral-900">Vote on the plan</h1>
         <p className="text-sm text-neutral-500 mt-1">Quick tap on what works for you.</p>
+        {hasSubmittedOnce && (
+          <p className="text-xs text-amber-700 mt-1">
+            Submitting again will overwrite your previous vote.
+          </p>
+        )}
       </div>
 
       {/* Questions */}
@@ -133,7 +148,11 @@ export function PollRespondPage() {
               </div>
             </div>
 
-            <div className="space-y-2" role="group" aria-label={cfg.label}>
+            <div
+              className="space-y-2"
+              role={cfg.isMulti ? 'group' : 'radiogroup'}
+              aria-label={cfg.label}
+            >
               {options.map(opt => {
                 const selected = votes[opt.id] === 'yes'
                 return (
@@ -141,7 +160,8 @@ export function PollRespondPage() {
                     key={opt.id}
                     label={opt.label}
                     selected={selected}
-                    onSelect={() => toggleVote(opt.id, 'yes', cfg.isMulti)}
+                    isMulti={cfg.isMulti}
+                    onSelect={() => toggleVote(opt.id, 'yes', cfg.isMulti, options.map((o) => o.id))}
                   />
                 )
               })}
@@ -152,6 +172,9 @@ export function PollRespondPage() {
 
       {/* Submit */}
       <div className="sticky bottom-4 pt-2">
+        <div className="sr-only" aria-live="polite">
+          {totalAnswered} options selected.
+        </div>
         <Button
           variant="primary"
           size="lg"
@@ -173,15 +196,17 @@ export function PollRespondPage() {
 interface VoteOptionButtonProps {
   label: string
   selected: boolean
+  isMulti: boolean
   onSelect: () => void
 }
 
-function VoteOptionButton({ label, selected, onSelect }: VoteOptionButtonProps) {
+function VoteOptionButton({ label, selected, isMulti, onSelect }: VoteOptionButtonProps) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      aria-pressed={selected}
+      role={isMulti ? 'checkbox' : 'radio'}
+      aria-checked={selected}
       className={cn(
         'w-full min-h-tap flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left',
         'transition-all duration-150 ease-ui',
