@@ -194,6 +194,25 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_group", ["groupId"]),
 
+  reminders: defineTable({
+    eventId: v.id("events"),
+    userId: v.id("users"),
+    mode: v.union(
+      v.literal("off"),
+      v.literal("day-before"),
+      v.literal("same-day"),
+      v.literal("custom"),
+    ),
+    customMinutesBefore: v.optional(v.number()),
+    scheduledAt: v.optional(v.number()),
+    sentAt: v.optional(v.number()),
+    status: v.union(v.literal("pending"), v.literal("sent"), v.literal("cancelled")),
+    createdAt: v.number(),
+  })
+    .index("by_event", ["eventId"])
+    .index("by_user", ["userId"])
+    .index("by_status_scheduled", ["status", "scheduledAt"]),
+
   notificationPrefs: defineTable({
     userId: v.id("users"),
     reminders: v.boolean(),
