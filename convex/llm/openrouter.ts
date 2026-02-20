@@ -12,29 +12,61 @@ function assertFreeModel(model: string) {
 }
 
 assertFreeModel(PRIMARY_MODEL);
-for (const model of FALLBACK_MODELS) {
-  assertFreeModel(model);
-}
+for (const model of FALLBACK_MODELS) assertFreeModel(model);
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
-export async function callOpenRouterJSON<T>(args: {
+export type OpenRouterCallSuccess<T> = {
+  data: T;
+  model: string;
+  attempts: number;
+  latencyMs: number;
+};
+
+export class OpenRouterError extends Error {
+  code: "config_error" | "rate_limited" | "provider_unavailable" | "malformed_response" | "request_failed";
+  retryable: boolean;
+
+  constructor(
+    code: OpenRouterError["code"],
+    message: string,
+    retryable: boolean,
+  ) {
+    super(message);
+    this.code = code;
+    this.retryable = retryable;
+  }
+}
+
+function mapStatus(status: number): OpenRouterError {
+  if (status === 401 || status === 403) {
+    return new OpenRouterError("config_error", `OpenRouter auth failed (${status})`, false);
+  }
+  if (status === 429) {
+    return new OpenRouterError("rate_limited", "OpenRouter rate limited", true);
+  }
+  if (status >= 500) {
+    return new OpenRouterError("provider_unavailable", `OpenRouter provider error (${status})`, true);
+  }
+  return new OpenRouterError("request_failed", `OpenRouter request failed (${status})`, false);
+}
+
+async function callSingleModel<T>(args: {
   apiKey: string;
   systemPrompt: string;
   userPrompt: string;
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  retries?: number;
-}): Promise<{ data: T; model: string }> {
-  const retries = args.retries ?? 1;
-  let lastError: Error | null = null;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  retries: number;
+}): Promise<OpenRouterCallSuccess<T>> {
+  assertFreeModel(args.model);
 
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
+  const started = Date.now();
+  let lastError: OpenRouterError | null = null;
+
+  for (let attempt = 0; attempt <= args.retries; attempt += 1) {
     try {
-      const model = args.model ?? PRIMARY_MODEL;
-      assertFreeModel(model);
-
       const messages: ChatMessage[] = [
         { role: "system", content: args.systemPrompt },
         { role: "user", content: args.userPrompt },
@@ -47,16 +79,16 @@ export async function callOpenRouterJSON<T>(args: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model,
-          temperature: args.temperature ?? 0.2,
-          max_tokens: args.maxTokens ?? 1200,
+          model: args.model,
+          temperature: args.temperature,
+          max_tokens: args.maxTokens,
           response_format: { type: "json_object" },
           messages,
         }),
       });
 
       if (!res.ok) {
-        throw new Error(`OpenRouter request failed with status ${res.status}`);
+        throw mapStatus(res.status);
       }
 
       const payload = (await res.json()) as {
@@ -66,20 +98,71 @@ export async function callOpenRouterJSON<T>(args: {
 
       const content = payload.choices?.[0]?.message?.content;
       if (!content) {
-        throw new Error("OpenRouter response missing content");
+        throw new OpenRouterError("malformed_response", "OpenRouter response missing content", true);
+      }
+
+      let parsed: T;
+      try {
+        parsed = JSON.parse(content) as T;
+      } catch {
+        throw new OpenRouterError("malformed_response", "OpenRouter returned invalid JSON", true);
       }
 
       return {
-        data: JSON.parse(content) as T,
-        model: payload.model ?? model,
+        data: parsed,
+        model: payload.model ?? args.model,
+        attempts: attempt + 1,
+        latencyMs: Date.now() - started,
       };
     } catch (error) {
-      lastError = error as Error;
-      if (attempt < retries) {
+      const mapped =
+        error instanceof OpenRouterError
+          ? error
+          : new OpenRouterError("request_failed", (error as Error).message, false);
+      lastError = mapped;
+
+      if (attempt < args.retries && mapped.retryable) {
         await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        continue;
       }
+      break;
     }
   }
 
-  throw lastError ?? new Error("OpenRouter call failed");
+  throw (
+    lastError ??
+    new OpenRouterError("request_failed", "OpenRouter call failed", false)
+  );
+}
+
+export async function callOpenRouterWithFallback<T>(args: {
+  apiKey: string;
+  systemPrompt: string;
+  userPrompt: string;
+  temperature?: number;
+  maxTokens?: number;
+  retries?: number;
+}): Promise<OpenRouterCallSuccess<T>> {
+  const models = [PRIMARY_MODEL, ...FALLBACK_MODELS];
+  let lastError: OpenRouterError | null = null;
+
+  for (const model of models) {
+    try {
+      return await callSingleModel<T>({
+        ...args,
+        model,
+        temperature: args.temperature ?? 0.2,
+        maxTokens: args.maxTokens ?? 1200,
+        retries: args.retries ?? 1,
+      });
+    } catch (error) {
+      lastError = error as OpenRouterError;
+      if (!lastError.retryable) break;
+    }
+  }
+
+  throw (
+    lastError ??
+    new OpenRouterError("request_failed", "All free-model routes failed", true)
+  );
 }
