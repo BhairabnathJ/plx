@@ -21,10 +21,13 @@ import type * as features_live_chat_dev_mode from "../features/live_chat_dev_mod
 import type * as features_poll_option_generation from "../features/poll_option_generation.js";
 import type * as features_poll_publish_and_web_response from "../features/poll_publish_and_web_response.js";
 import type * as features_session_creation_context_ingest from "../features/session_creation_context_ingest.js";
+import type * as features_settings from "../features/settings.js";
 import type * as features_summary_composer from "../features/summary_composer.js";
 import type * as features_ui_shell_routing_foundation from "../features/ui_shell_routing_foundation.js";
 import type * as features_vote_aggregation_best_combo from "../features/vote_aggregation_best_combo.js";
 import type * as groups from "../groups.js";
+import type * as lib_observability from "../lib/observability.js";
+import type * as lib_sessionMachine from "../lib/sessionMachine.js";
 import type * as lib_status from "../lib/status.js";
 import type * as llm_actions from "../llm/actions.js";
 import type * as llm_openrouter from "../llm/openrouter.js";
@@ -50,10 +53,13 @@ declare const fullApi: ApiFromModules<{
   "features/poll_option_generation": typeof features_poll_option_generation;
   "features/poll_publish_and_web_response": typeof features_poll_publish_and_web_response;
   "features/session_creation_context_ingest": typeof features_session_creation_context_ingest;
+  "features/settings": typeof features_settings;
   "features/summary_composer": typeof features_summary_composer;
   "features/ui_shell_routing_foundation": typeof features_ui_shell_routing_foundation;
   "features/vote_aggregation_best_combo": typeof features_vote_aggregation_best_combo;
   groups: typeof groups;
+  "lib/observability": typeof lib_observability;
+  "lib/sessionMachine": typeof lib_sessionMachine;
   "lib/status": typeof lib_status;
   "llm/actions": typeof llm_actions;
   "llm/openrouter": typeof llm_openrouter;
