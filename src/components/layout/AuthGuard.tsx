@@ -18,7 +18,8 @@ export function AuthGuard({ children }: AuthGuardProps) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace state={{ from: location.pathname }} />
+    const returnTo = `${location.pathname}${location.search}`
+    return <Navigate to={`/auth?mode=signin&returnTo=${encodeURIComponent(returnTo)}`} replace state={{ from: location.pathname }} />
   }
 
   return <>{children}</>
