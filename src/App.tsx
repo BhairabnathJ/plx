@@ -1,34 +1,53 @@
-import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
+import { lazy, Suspense } from 'react'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
+import { AppErrorBoundary } from '@/components/feedback/AppErrorBoundary'
 import { AppShell } from '@/components/layout/AppShell'
 import { AuthGuard } from '@/components/layout/AuthGuard'
+import { DevModeGuard } from '@/components/layout/DevModeGuard'
 import { PublicShell } from '@/components/layout/PublicShell'
 import { SessionShell } from '@/components/layout/SessionShell'
-import { DevModeGuard } from '@/components/layout/DevModeGuard'
-import { LandingPage } from '@/pages/Landing/LandingPage'
-import { AuthPage } from '@/pages/Auth/AuthPage'
-import { DashboardPage } from '@/pages/Dashboard/DashboardPage'
-import { SessionsPage } from '@/pages/Sessions/SessionsPage'
-import { SessionHubPage } from '@/pages/Session/Hub/SessionHubPage'
-import { ContextPage } from '@/pages/Session/ContextTab/ContextPage'
-import { ConstraintsPage } from '@/pages/Session/ConstraintsTab/ConstraintsPage'
-import { PollBuilderPage } from '@/pages/Session/PollBuilderTab/PollBuilderPage'
-import { PollSharePage } from '@/pages/Session/PollShareTab/PollSharePage'
-import { VotesPage } from '@/pages/Session/VotesTab/VotesPage'
-import { SummaryPage } from '@/pages/Session/SummaryTab/SummaryPage'
-import { FinalizePage } from '@/pages/Session/FinalizeTab/FinalizePage'
-import { PollRespondPage } from '@/pages/PollRespond/PollRespondPage'
-import { HistoryPage } from '@/pages/History/HistoryPage'
-import { SettingsPage } from '@/pages/Settings/SettingsPage'
-import { LiveChatPage } from '@/pages/LiveChat/LiveChatPage'
+
+const LandingPage = lazy(() => import('@/pages/Landing/LandingPage').then((m) => ({ default: m.LandingPage })))
+const AuthPage = lazy(() => import('@/pages/Auth/AuthPage').then((m) => ({ default: m.AuthPage })))
+const DashboardPage = lazy(() => import('@/pages/Dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const SessionsPage = lazy(() => import('@/pages/Sessions/SessionsPage').then((m) => ({ default: m.SessionsPage })))
+const SessionHubPage = lazy(() => import('@/pages/Session/Hub/SessionHubPage').then((m) => ({ default: m.SessionHubPage })))
+const ContextPage = lazy(() => import('@/pages/Session/ContextTab/ContextPage').then((m) => ({ default: m.ContextPage })))
+const ConstraintsPage = lazy(() => import('@/pages/Session/ConstraintsTab/ConstraintsPage').then((m) => ({ default: m.ConstraintsPage })))
+const PollBuilderPage = lazy(() => import('@/pages/Session/PollBuilderTab/PollBuilderPage').then((m) => ({ default: m.PollBuilderPage })))
+const PollSharePage = lazy(() => import('@/pages/Session/PollShareTab/PollSharePage').then((m) => ({ default: m.PollSharePage })))
+const VotesPage = lazy(() => import('@/pages/Session/VotesTab/VotesPage').then((m) => ({ default: m.VotesPage })))
+const SummaryPage = lazy(() => import('@/pages/Session/SummaryTab/SummaryPage').then((m) => ({ default: m.SummaryPage })))
+const FinalizePage = lazy(() => import('@/pages/Session/FinalizeTab/FinalizePage').then((m) => ({ default: m.FinalizePage })))
+const PollRespondPage = lazy(() => import('@/pages/PollRespond/PollRespondPage').then((m) => ({ default: m.PollRespondPage })))
+const HistoryPage = lazy(() => import('@/pages/History/HistoryPage').then((m) => ({ default: m.HistoryPage })))
+const SettingsPage = lazy(() => import('@/pages/Settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
+const LiveChatPage = lazy(() => import('@/pages/LiveChat/LiveChatPage').then((m) => ({ default: m.LiveChatPage })))
+
+function RouteFrame({ children }: { children: React.ReactNode }) {
+  return (
+    <AppErrorBoundary>
+      <Suspense
+        fallback={
+          <div className="min-h-[30vh] flex items-center justify-center text-sm text-neutral-500">
+            Loading screen…
+          </div>
+        }
+      >
+        {children}
+      </Suspense>
+    </AppErrorBoundary>
+  )
+}
 
 const router = createBrowserRouter([
   {
     path: '/',
-    element: <LandingPage />,
+    element: <RouteFrame><LandingPage /></RouteFrame>,
   },
   {
     path: '/auth',
-    element: <AuthPage />,
+    element: <RouteFrame><AuthPage /></RouteFrame>,
   },
   {
     path: '/app/:groupId',
@@ -44,11 +63,11 @@ const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: <RouteFrame><DashboardPage /></RouteFrame>,
       },
       {
         path: 'sessions',
-        element: <SessionsPage />,
+        element: <RouteFrame><SessionsPage /></RouteFrame>,
       },
       {
         path: 'sessions/:sessionId',
@@ -56,31 +75,31 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <SessionHubPage />,
+            element: <RouteFrame><SessionHubPage /></RouteFrame>,
           },
-          { path: 'overview', element: <SessionHubPage /> },
-          { path: 'context', element: <ContextPage /> },
-          { path: 'constraints', element: <ConstraintsPage /> },
-          { path: 'poll-builder', element: <PollBuilderPage /> },
-          { path: 'poll-share', element: <PollSharePage /> },
-          { path: 'votes', element: <VotesPage /> },
-          { path: 'summary', element: <SummaryPage /> },
-          { path: 'finalize', element: <FinalizePage /> },
+          { path: 'overview', element: <RouteFrame><SessionHubPage /></RouteFrame> },
+          { path: 'context', element: <RouteFrame><ContextPage /></RouteFrame> },
+          { path: 'constraints', element: <RouteFrame><ConstraintsPage /></RouteFrame> },
+          { path: 'poll-builder', element: <RouteFrame><PollBuilderPage /></RouteFrame> },
+          { path: 'poll-share', element: <RouteFrame><PollSharePage /></RouteFrame> },
+          { path: 'votes', element: <RouteFrame><VotesPage /></RouteFrame> },
+          { path: 'summary', element: <RouteFrame><SummaryPage /></RouteFrame> },
+          { path: 'finalize', element: <RouteFrame><FinalizePage /></RouteFrame> },
         ],
       },
       {
         path: 'history',
-        element: <HistoryPage />,
+        element: <RouteFrame><HistoryPage /></RouteFrame>,
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: <RouteFrame><SettingsPage /></RouteFrame>,
       },
       {
         path: 'live-chat',
         element: (
           <DevModeGuard>
-            <LiveChatPage />
+            <RouteFrame><LiveChatPage /></RouteFrame>
           </DevModeGuard>
         ),
       },
@@ -92,7 +111,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <PollRespondPage />,
+        element: <RouteFrame><PollRespondPage /></RouteFrame>,
       },
     ],
   },
