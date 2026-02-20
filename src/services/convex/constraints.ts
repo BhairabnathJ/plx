@@ -1,20 +1,35 @@
-import { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import type { Constraint, ConstraintState } from '@/types'
-import { MOCK_CONSTRAINTS } from '@/fixtures'
+import { useAuthSessionToken } from './auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace body with real Convex hooks. Signature stays the same.
+type ApiAny = any
 
 export function useConstraints(sessionId: string): { constraints: Constraint[]; isLoading: boolean } {
-  const constraints = MOCK_CONSTRAINTS.filter(c => c.sessionId === sessionId)
-  return { constraints, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const rows = useQuery(
+    (api as ApiAny)['features/constraint_extraction_review'].listBySession,
+    sessionToken && sessionId ? { sessionToken, sessionId } : 'skip',
+  ) as Constraint[] | undefined
+
+  return {
+    constraints: rows ?? [],
+    isLoading: !!sessionToken && rows === undefined,
+  }
 }
 
 export function useUpdateConstraint(): {
   updateConstraint: (id: string, updates: { text?: string; state?: ConstraintState }) => Promise<void>
 } {
+  const sessionToken = useAuthSessionToken()
+  const updateMutation = useMutation(
+    (api as ApiAny)['features/constraint_extraction_review'].update,
+  )
+
   return {
-    updateConstraint: async () => {
-      await new Promise(r => setTimeout(r, 300))
+    updateConstraint: async (id, updates) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await updateMutation({ sessionToken, constraintId: id, ...updates })
     },
   }
 }
@@ -23,14 +38,24 @@ export function useAddConstraint(): {
   addConstraint: (constraint: Omit<Constraint, 'id'>) => Promise<string>
   isLoading: boolean
 } {
-  const [isLoading, setIsLoading] = useState(false)
   return {
-    addConstraint: async (_c) => {
-      setIsLoading(true)
-      await new Promise(r => setTimeout(r, 400))
-      setIsLoading(false)
-      return 'c-' + Date.now()
+    addConstraint: async () => 'pending',
+    isLoading: false,
+  }
+}
+
+export function useBulkUpdateConstraints(): {
+  bulkUpdate: (sessionId: string, state: 'accepted' | 'removed', kind?: Constraint['kind']) => Promise<void>
+} {
+  const sessionToken = useAuthSessionToken()
+  const bulkMutation = useMutation(
+    (api as ApiAny)['features/constraint_extraction_review'].bulkUpdate,
+  )
+
+  return {
+    bulkUpdate: async (sessionId, state, kind) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await bulkMutation({ sessionToken, sessionId, state, kind })
     },
-    isLoading,
   }
 }

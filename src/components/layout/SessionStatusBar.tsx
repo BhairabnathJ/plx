@@ -22,7 +22,7 @@ const STATUS_BG: Record<SessionStatus, string> = {
 }
 
 const STATUS_TO_TAB: Record<SessionStatus, string> = {
-  draft: 'context',
+  draft: 'overview',
   analyzed: 'constraints',
   polling: 'votes',
   summarized: 'summary',

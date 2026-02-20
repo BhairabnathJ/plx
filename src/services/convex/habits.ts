@@ -1,9 +1,24 @@
+import { useQuery } from 'convex/react'
 import type { HabitProfile } from '@/types'
-import { MOCK_HABIT_PROFILE } from '@/fixtures'
+import { useAuthSessionToken } from './auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace body with real Convex hooks. Signature stays the same.
+type ApiAny = any
 
 export function useHabitProfile(groupId: string): { profile: HabitProfile | null; isLoading: boolean } {
-  const profile = groupId === 'group-1' ? MOCK_HABIT_PROFILE : null
-  return { profile, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const raw = useQuery(
+    (api as ApiAny)['features/history_analytics_tuning'].getHabitProfile,
+    sessionToken && groupId ? { sessionToken, groupId } : 'skip',
+  ) as Omit<HabitProfile, 'id' | 'groupId'> | null | undefined
+
+  const profile: HabitProfile | null =
+    raw
+      ? { id: groupId, groupId, ...raw }
+      : null
+
+  return {
+    profile,
+    isLoading: !!sessionToken && raw === undefined,
+  }
 }

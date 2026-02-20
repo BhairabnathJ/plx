@@ -10,8 +10,9 @@ export function LandingPage() {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email.trim()) return
-    navigate(`/auth?email=${encodeURIComponent(email.trim().toLowerCase())}`)
+    const params = new URLSearchParams({ mode: 'signup' })
+    if (email.trim()) params.set('email', email.trim().toLowerCase())
+    navigate(`/auth?${params.toString()}`)
   }
 
   const features = [
@@ -42,7 +43,7 @@ export function LandingPage() {
         </div>
         <button
           type="button"
-          onClick={() => navigate('/auth')}
+          onClick={() => navigate('/auth?mode=signin')}
           className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors"
         >
           Sign in
@@ -98,7 +99,7 @@ export function LandingPage() {
         {/* Demo bypass */}
         <button
           type="button"
-          onClick={() => navigate('/auth')}
+          onClick={() => navigate('/auth?mode=signin')}
           className="mt-4 text-sm text-neutral-400 hover:text-neutral-600 underline underline-offset-2 transition-colors"
         >
           Preview the app →

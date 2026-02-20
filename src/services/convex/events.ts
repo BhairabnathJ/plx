@@ -1,31 +1,95 @@
-import { useState } from 'react'
-import type { Event, AttendanceSnapshot } from '@/types'
-import { MOCK_EVENT, MOCK_ATTENDANCE } from '@/fixtures'
+import { useMutation, useQuery } from 'convex/react'
+import type { Event, AttendanceSnapshot, ReminderMode } from '@/types'
+import { useAuthSessionToken } from './auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace body with real Convex hooks. Signature stays the same.
+type ApiAny = any
 
 export function useEvent(sessionId: string): { event: Event | null; isLoading: boolean } {
-  const event = sessionId === 'session-3' ? MOCK_EVENT : null
-  return { event, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const rows = useQuery(
+    (api as ApiAny)['features/event_finalize_reminders'].getBySession,
+    sessionToken && sessionId ? { sessionToken, sessionId } : 'skip',
+  ) as Event[] | undefined
+
+  return {
+    event: rows?.[0] ?? null,
+    isLoading: !!sessionToken && rows === undefined,
+  }
 }
 
-export function useAttendanceSnapshot(eventId: string): { snapshot: AttendanceSnapshot | null; isLoading: boolean } {
-  const snapshot = eventId === 'event-1' ? MOCK_ATTENDANCE : null
-  return { snapshot, isLoading: false }
+export function useAttendanceSnapshot(_eventId: string): { snapshot: AttendanceSnapshot | null; isLoading: boolean } {
+  // Attendance snapshots are recorded post-finalize; return null until implemented
+  return { snapshot: null, isLoading: false }
 }
 
 export function useFinalizeEvent(): {
   finalizeEvent: (input: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>) => Promise<string>
   isLoading: boolean
 } {
-  const [isLoading, setIsLoading] = useState(false)
+  const sessionToken = useAuthSessionToken()
+  const createMutation = useMutation(
+    (api as ApiAny)['features/event_finalize_reminders'].createEvent,
+  )
+  const lockMutation = useMutation(
+    (api as ApiAny)['features/event_finalize_reminders'].lockEvent,
+  )
+
   return {
-    finalizeEvent: async () => {
-      setIsLoading(true)
-      await new Promise(r => setTimeout(r, 800))
-      setIsLoading(false)
-      return 'event-' + Date.now()
+    finalizeEvent: async (input) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      const { eventId } = await createMutation({
+        sessionToken,
+        sessionId: input.sessionId,
+        title: input.title,
+        whenIso: input.whenIso,
+        venueName: input.venueName,
+        mapUrl: input.mapUrl,
+      })
+      await lockMutation({ sessionToken, eventId })
+      return String(eventId)
     },
-    isLoading,
+    isLoading: false,
   }
+}
+
+export function useUpdateEvent(): {
+  updateEvent: (eventId: string, updates: Partial<Pick<Event, 'title' | 'whenIso' | 'venueName' | 'mapUrl'>>) => Promise<void>
+} {
+  const sessionToken = useAuthSessionToken()
+  const updateMutation = useMutation(
+    (api as ApiAny)['features/event_finalize_reminders'].updateEvent,
+  )
+
+  return {
+    updateEvent: async (eventId, updates) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await updateMutation({ sessionToken, eventId, ...updates })
+    },
+  }
+}
+
+export function useSetReminder(): {
+  setReminder: (eventId: string, mode: ReminderMode, customMinutesBefore?: number) => Promise<void>
+} {
+  const sessionToken = useAuthSessionToken()
+  const setMutation = useMutation(
+    (api as ApiAny)['features/event_finalize_reminders'].setReminder,
+  )
+
+  return {
+    setReminder: async (eventId, mode, customMinutesBefore) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await setMutation({ sessionToken, eventId, mode, customMinutesBefore })
+    },
+  }
+}
+
+export function useReminder(eventId: string) {
+  const sessionToken = useAuthSessionToken()
+  const reminder = useQuery(
+    (api as ApiAny)['features/event_finalize_reminders'].getReminders,
+    sessionToken && eventId ? { sessionToken, eventId } : 'skip',
+  )
+  return { reminder: reminder ?? null }
 }

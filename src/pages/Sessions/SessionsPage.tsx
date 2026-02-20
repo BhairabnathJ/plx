@@ -22,7 +22,7 @@ const STATUS_FILTERS: Array<{ label: string; value: SessionStatus | 'all' }> = [
 ]
 
 export function SessionsPage() {
-  const { groupId = 'group-1' } = useParams()
+  const { groupId = '' } = useParams()
   const [modalOpen, setModalOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<SessionStatus | 'all'>('all')
@@ -33,6 +33,16 @@ export function SessionsPage() {
     const matchesSearch = !search || s.title.toLowerCase().includes(search.toLowerCase())
     return matchesStatus && matchesSearch
   })
+
+  if (!groupId) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="card p-5 text-sm text-neutral-600">
+          Select a group to view sessions.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex-1 max-w-3xl mx-auto w-full px-4 py-6 space-y-5">
