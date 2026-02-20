@@ -175,4 +175,19 @@ export default defineSchema({
     confidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
     updatedAt: v.number(),
   }).index("by_group", ["groupId"]),
+
+  notificationPrefs: defineTable({
+    userId: v.id("users"),
+    reminders: v.boolean(),
+    pollVotes: v.boolean(),
+    sessionFinalized: v.boolean(),
+    updatedAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  summaryVersions: defineTable({
+    sessionId: v.id("sessions"),
+    summaryId: v.id("summaries"),
+    versionNumber: v.number(),
+    createdAt: v.number(),
+  }).index("by_session", ["sessionId"]),
 });
