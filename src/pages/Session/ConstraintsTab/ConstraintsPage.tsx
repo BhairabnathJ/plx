@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { CheckCheck, Filter, Plus, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { ConstraintRow } from '@/components/domain/ConstraintRow'
 import { SkeletonCard } from '@/components/primitives/Skeleton'
 import { EmptyState } from '@/components/feedback/EmptyState'
 import { useConstraints, useUpdateConstraint, useAddConstraint } from '@/services/convex/constraints'
-import type { ConstraintKind } from '@/types'
+import type { ConfidenceLevel, Constraint, ConstraintKind, ProvenanceTag } from '@/types'
 import { track } from '@/lib/telemetry'
 import { ShieldAlert, Heart, MapPin } from 'lucide-react'
 
@@ -25,6 +25,10 @@ export function ConstraintsPage() {
 
   const [addingKind, setAddingKind] = useState<ConstraintKind | null>(null)
   const [newText, setNewText] = useState('')
+  const [confidenceFilter, setConfidenceFilter] = useState<ConfidenceLevel | 'all'>('all')
+  const [provenanceFilter, setProvenanceFilter] = useState<ProvenanceTag | 'all'>('all')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const [lastBulk, setLastBulk] = useState<{ ids: string[]; previousStates: Record<string, Constraint['state']> } | null>(null)
 
   const handleAccept = async (id: string) => {
     await updateConstraint(id, { state: 'accepted' })
@@ -54,6 +58,42 @@ export function ConstraintsPage() {
     setAddingKind(null)
   }
 
+  const applyFilters = (items: Constraint[]) =>
+    items.filter((c) => {
+      const matchesConfidence = confidenceFilter === 'all' || c.confidence === confidenceFilter
+      const matchesProvenance = provenanceFilter === 'all' || c.provenance === provenanceFilter
+      return matchesConfidence && matchesProvenance
+    })
+
+  const bulkUpdate = async (target: Constraint['state']) => {
+    const eligible = constraints.filter((c) => {
+      if (c.state === 'removed') return false
+      const matchesConfidence = confidenceFilter === 'all' || c.confidence === confidenceFilter
+      const matchesProvenance = provenanceFilter === 'all' || c.provenance === provenanceFilter
+      return matchesConfidence && matchesProvenance
+    })
+    if (eligible.length === 0) return
+    setBulkBusy(true)
+    try {
+      const previousStates = Object.fromEntries(eligible.map((c) => [c.id, c.state]))
+      await Promise.all(eligible.map((c) => updateConstraint(c.id, { state: target })))
+      setLastBulk({ ids: eligible.map((c) => c.id), previousStates })
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
+  const undoLastBulk = async () => {
+    if (!lastBulk) return
+    setBulkBusy(true)
+    try {
+      await Promise.all(lastBulk.ids.map((id) => updateConstraint(id, { state: lastBulk.previousStates[id] })))
+      setLastBulk(null)
+    } finally {
+      setBulkBusy(false)
+    }
+  }
+
   if (isLoading) return <div className="p-6"><SkeletonCard count={3} /></div>
 
   return (
@@ -65,9 +105,60 @@ export function ConstraintsPage() {
         </p>
       </div>
 
+      <div className="card p-3.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-medium text-neutral-800 inline-flex items-center gap-2">
+            <Filter size={14} />
+            Filters
+          </p>
+          {lastBulk && (
+            <Button variant="ghost" size="sm" iconLeft={<RotateCcw size={13} />} onClick={undoLastBulk} loading={bulkBusy}>
+              Undo bulk
+            </Button>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'high', 'medium', 'low'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setConfidenceFilter(value)}
+              className={`px-2.5 py-1 rounded-lg text-xs border ${
+                confidenceFilter === value ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-neutral-200 text-neutral-600'
+              }`}
+            >
+              {value === 'all' ? 'All confidence' : `${value} confidence`}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {(['all', 'chat', 'habit', 'manual'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setProvenanceFilter(value)}
+              className={`px-2.5 py-1 rounded-lg text-xs border ${
+                provenanceFilter === value ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-neutral-200 text-neutral-600'
+              }`}
+            >
+              {value === 'all' ? 'All sources' : value}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" iconLeft={<CheckCheck size={13} />} onClick={() => bulkUpdate('accepted')} loading={bulkBusy}>
+            Accept filtered
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => bulkUpdate('removed')} loading={bulkBusy}>
+            Remove filtered
+          </Button>
+        </div>
+      </div>
+
       {SECTIONS.map(section => {
         const items = constraints.filter(c => c.kind === section.kind)
-        const visible = items.filter(c => c.state !== 'removed')
+        const filtered = applyFilters(items)
+        const visible = filtered.filter(c => c.state !== 'removed')
 
         return (
           <section key={section.kind} className="card p-4 space-y-3">
@@ -89,14 +180,14 @@ export function ConstraintsPage() {
               </Button>
             </div>
 
-            {items.length === 0 && !addingKind ? (
+            {filtered.length === 0 && !addingKind ? (
               <EmptyState
-                title={`No ${section.label.toLowerCase()} found`}
-                description="Add one manually if needed."
+                title={`No ${section.label.toLowerCase()} match filters`}
+                description="Adjust filters or add one manually."
               />
             ) : (
               <div className="divide-y divide-neutral-100">
-                {items.map(c => (
+                {filtered.map(c => (
                   <ConstraintRow
                     key={c.id}
                     constraint={c}
@@ -131,9 +222,9 @@ export function ConstraintsPage() {
               </div>
             )}
 
-            {items.length > 0 && (
+            {filtered.length > 0 && (
               <p className="text-xs text-neutral-400">
-                {visible.length} of {items.length} active
+                {visible.length} of {filtered.length} active
               </p>
             )}
           </section>
