@@ -216,3 +216,23 @@ export const getVoterStatus = query({
     };
   },
 });
+
+/** Get the poll for a given planner session (organizer view). */
+export const getBySession = query({
+  args: { sessionToken: v.string(), sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await resolveSession(ctx, args.sessionToken);
+    const poll = await ctx.db
+      .query("polls")
+      .withIndex("by_session", (q: any) => q.eq("sessionId", args.sessionId))
+      .first();
+    if (!poll) return null;
+    return {
+      id: poll._id,
+      sessionId: poll.sessionId,
+      status: poll.status,
+      publishToken: poll.publishToken,
+      tokenExpiresAt: poll.tokenExpiresAt,
+    };
+  },
+});

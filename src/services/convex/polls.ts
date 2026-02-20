@@ -21,18 +21,23 @@ function groupByDimension(options: PollOption[], pollId: string): PollOptionBund
   return bundle
 }
 
-export function usePoll(_sessionId: string): { poll: Poll | null; isLoading: boolean } {
-  useAuthSessionToken()
-  // polls are linked via sessionId — query sessions to find the poll
-  // For now this surface returns null until the session→poll lookup is wired
-  // (poll creation happens via createPoll mutation, not a direct query by sessionId)
-  return { poll: null, isLoading: false }
+export function usePoll(sessionId: string): { poll: Poll | null; isLoading: boolean } {
+  const sessionToken = useAuthSessionToken()
+  const poll = useQuery(
+    (api as ApiAny)['features/poll_publish_and_web_response'].getBySession,
+    sessionToken && sessionId ? { sessionToken, sessionId } : 'skip',
+  ) as Poll | null | undefined
+
+  return {
+    poll: poll ?? null,
+    isLoading: !!sessionToken && poll === undefined,
+  }
 }
 
 export function usePollByToken(token: string): { poll: Poll | null; isLoading: boolean } {
   const raw = useQuery(
     (api as ApiAny)['features/poll_publish_and_web_response'].getByToken,
-    token && token !== 'abc123xyz' ? { publishToken: token } : 'skip',
+    token ? { publishToken: token } : 'skip',
   ) as { id: string; sessionId: string; status: Poll['status']; tokenExpiresAt?: number; options: PollOption[] } | null | undefined
 
   const poll: Poll | null = raw
@@ -41,7 +46,7 @@ export function usePollByToken(token: string): { poll: Poll | null; isLoading: b
 
   return {
     poll,
-    isLoading: raw === undefined,
+    isLoading: !!token && raw === undefined,
   }
 }
 

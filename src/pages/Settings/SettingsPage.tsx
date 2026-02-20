@@ -5,35 +5,13 @@ import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { useAuthUser, useLogin } from '@/services/convex/auth'
 import { useGroup } from '@/services/convex/groups'
-
-type NotificationPrefs = {
-  reminders: boolean
-  votes: boolean
-  finalized: boolean
-}
-
-const PREFS_KEY = 'plannerbot.settings.notifications'
-
-function loadPrefs(): NotificationPrefs {
-  try {
-    const raw = localStorage.getItem(PREFS_KEY)
-    if (!raw) {
-      return { reminders: true, votes: true, finalized: true }
-    }
-    const parsed = JSON.parse(raw) as Partial<NotificationPrefs>
-    return {
-      reminders: parsed.reminders ?? true,
-      votes: parsed.votes ?? true,
-      finalized: parsed.finalized ?? true,
-    }
-  } catch {
-    return { reminders: true, votes: true, finalized: true }
-  }
-}
-
-function savePrefs(prefs: NotificationPrefs) {
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
-}
+import {
+  useNotificationPrefs,
+  useUpdateNotificationPrefs,
+  useUpdateProfile,
+  useDeleteAccount,
+  useUpdateGroupSettings,
+} from '@/services/convex/settings'
 
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -42,37 +20,73 @@ export function SettingsPage() {
   const { user } = useAuthUser()
   const { logout } = useLogin()
 
+  const { prefs: remotePrefs } = useNotificationPrefs()
+  const { updatePrefs } = useUpdateNotificationPrefs()
+  const { updateProfile } = useUpdateProfile()
+  const { deleteAccount } = useDeleteAccount()
+  const { updateGroup } = useUpdateGroupSettings()
+
   const [displayName, setDisplayName] = useState(user?.name ?? '')
-  const [prefs, setPrefs] = useState<NotificationPrefs>(() => loadPrefs())
+  const [groupName, setGroupName] = useState(group?.name ?? '')
+  const [reminders, setReminders] = useState(remotePrefs?.reminders ?? true)
+  const [pollVotes, setPollVotes] = useState(remotePrefs?.pollVotes ?? true)
+  const [sessionFinalized, setSessionFinalized] = useState(remotePrefs?.sessionFinalized ?? true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  // Sync remote prefs when they load
+  useEffect(() => {
+    if (remotePrefs) {
+      setReminders(remotePrefs.reminders)
+      setPollVotes(remotePrefs.pollVotes)
+      setSessionFinalized(remotePrefs.sessionFinalized)
+    }
+  }, [remotePrefs])
+
   useEffect(() => {
     setDisplayName(user?.name ?? '')
   }, [user?.name])
 
+  useEffect(() => {
+    setGroupName(group?.name ?? '')
+  }, [group?.name])
+
   const isDirty = useMemo(() => {
     const nameDirty = (user?.name ?? '') !== displayName
-    const stored = loadPrefs()
-    return (
-      nameDirty ||
-      stored.reminders !== prefs.reminders ||
-      stored.votes !== prefs.votes ||
-      stored.finalized !== prefs.finalized
-    )
-  }, [displayName, prefs, user?.name])
+    const groupNameDirty = (group?.name ?? '') !== groupName
+    const prefsDirty =
+      reminders !== (remotePrefs?.reminders ?? true) ||
+      pollVotes !== (remotePrefs?.pollVotes ?? true) ||
+      sessionFinalized !== (remotePrefs?.sessionFinalized ?? true)
+    return nameDirty || groupNameDirty || prefsDirty
+  }, [displayName, groupName, reminders, pollVotes, sessionFinalized, user?.name, group?.name, remotePrefs])
 
   const handleSave = async () => {
     setSaving(true)
     setSaved(false)
     setError(null)
     try {
-      // Backend profile mutation will be wired in Claude backend lane.
-      // Persist notification preferences immediately so this page is no longer fake.
-      savePrefs(prefs)
+      const saves: Promise<void>[] = []
+
+      if ((user?.name ?? '') !== displayName) {
+        saves.push(updateProfile(displayName))
+      }
+      if ((group?.name ?? '') !== groupName && groupName.trim()) {
+        saves.push(updateGroup(groupId, { name: groupName.trim() }))
+      }
+
+      const prefsDirty =
+        reminders !== (remotePrefs?.reminders ?? true) ||
+        pollVotes !== (remotePrefs?.pollVotes ?? true) ||
+        sessionFinalized !== (remotePrefs?.sessionFinalized ?? true)
+      if (prefsDirty) {
+        saves.push(updatePrefs({ reminders, pollVotes, sessionFinalized }))
+      }
+
+      await Promise.all(saves)
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
     } catch (err) {
@@ -86,8 +100,7 @@ export function SettingsPage() {
     setDeleting(true)
     setError(null)
     try {
-      localStorage.removeItem(PREFS_KEY)
-      await logout()
+      await deleteAccount()
       navigate('/auth?mode=signin', { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to delete account right now')
@@ -109,7 +122,6 @@ export function SettingsPage() {
           label="Display name"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          hint="Profile persistence to backend is part of backend contract work."
         />
         <Input label="Email" value={user?.email ?? ''} readOnly disabled />
       </div>
@@ -119,10 +131,12 @@ export function SettingsPage() {
           <span className="text-primary-500" aria-hidden><Users size={16} /></span>
           Group
         </div>
-        <Input label="Current group" value={group?.name ?? 'No group selected'} readOnly disabled />
-        <p className="text-xs text-neutral-500">
-          Group rename permissions and persistence are enforced by backend ownership checks.
-        </p>
+        <Input
+          label="Group name"
+          value={groupName}
+          onChange={(e) => setGroupName(e.target.value)}
+          hint="Only group owners can rename the group."
+        />
       </div>
 
       <div className="card p-4 space-y-3">
@@ -135,8 +149,8 @@ export function SettingsPage() {
             <span className="text-sm text-neutral-700">Reminder notifications</span>
             <input
               type="checkbox"
-              checked={prefs.reminders}
-              onChange={(e) => setPrefs((current) => ({ ...current, reminders: e.target.checked }))}
+              checked={reminders}
+              onChange={(e) => setReminders(e.target.checked)}
               className="h-4 w-4 rounded accent-primary-500"
             />
           </label>
@@ -144,8 +158,8 @@ export function SettingsPage() {
             <span className="text-sm text-neutral-700">New poll votes</span>
             <input
               type="checkbox"
-              checked={prefs.votes}
-              onChange={(e) => setPrefs((current) => ({ ...current, votes: e.target.checked }))}
+              checked={pollVotes}
+              onChange={(e) => setPollVotes(e.target.checked)}
               className="h-4 w-4 rounded accent-primary-500"
             />
           </label>
@@ -153,8 +167,8 @@ export function SettingsPage() {
             <span className="text-sm text-neutral-700">Session finalized</span>
             <input
               type="checkbox"
-              checked={prefs.finalized}
-              onChange={(e) => setPrefs((current) => ({ ...current, finalized: e.target.checked }))}
+              checked={sessionFinalized}
+              onChange={(e) => setSessionFinalized(e.target.checked)}
               className="h-4 w-4 rounded accent-primary-500"
             />
           </label>
@@ -192,8 +206,8 @@ export function SettingsPage() {
           <div className="rounded-lg border border-red-200 bg-red-50 p-3 space-y-2">
             <p className="text-sm text-red-800 font-medium">Confirm account deletion</p>
             <p className="text-xs text-red-700">
-              This signs you out immediately and clears local settings on this device.
-              Full backend record deletion is handled by backend ownership flow.
+              This permanently deletes your account, all session data, group memberships, and vote history.
+              This action cannot be undone.
             </p>
             <div className="flex gap-2">
               <Button
