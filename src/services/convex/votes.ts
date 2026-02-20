@@ -1,8 +1,27 @@
 import { useState } from 'react'
+import { useMutation, useQuery } from 'convex/react'
 import type { VoteTally, BestComboResult, VoteType } from '@/types'
-import { MOCK_VOTE_TALLIES, MOCK_BEST_COMBOS } from '@/fixtures'
+import { useAuthSessionToken } from './auth'
+import { useAuthUser } from './auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace body with real Convex hooks. Signature stays the same.
+type ApiAny = any
+
+type RawTally = {
+  optionId: string
+  dimension: string
+  label: string
+  rank: number
+  isActive: boolean
+  voteCount: number
+  pct: number
+}
+
+type RawVoteTalliesResult = {
+  tallies: RawTally[]
+  totalVoters: number
+  respondedVoters: number
+}
 
 export function useVoteTallies(pollId: string): {
   tallies: VoteTally[]
@@ -10,25 +29,69 @@ export function useVoteTallies(pollId: string): {
   respondedVoters: number
   isLoading: boolean
 } {
-  const tallies = pollId === 'poll-1' ? MOCK_VOTE_TALLIES : []
-  return { tallies, totalVoters: 7, respondedVoters: 5, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const raw = useQuery(
+    (api as ApiAny).features.vote_aggregation_best_combo.getVoteTallies,
+    sessionToken && pollId ? { sessionToken, pollId } : 'skip',
+  ) as RawVoteTalliesResult | undefined
+
+  // Adapt backend shape (voteCount/pct selected model) to frontend VoteTally type (yes/no/maybe/noResponse).
+  // The vote model is binary (selected / not selected) — map: yes=voteCount, noResponse=totalVoters-voteCount.
+  const totalVoters = raw?.totalVoters ?? 0
+  const tallies: VoteTally[] = (raw?.tallies ?? []).map((t) => ({
+    optionId: String(t.optionId),
+    label: t.label,
+    yes: t.voteCount,
+    no: 0,
+    maybe: 0,
+    noResponse: Math.max(0, totalVoters - t.voteCount),
+    total: totalVoters,
+  }))
+
+  return {
+    tallies,
+    totalVoters,
+    respondedVoters: raw?.respondedVoters ?? 0,
+    isLoading: !!sessionToken && raw === undefined,
+  }
 }
 
 export function useBestCombos(pollId: string): { combo: BestComboResult | null; isLoading: boolean } {
-  const combo = pollId === 'poll-1' ? MOCK_BEST_COMBOS : null
-  return { combo, isLoading: false }
+  const sessionToken = useAuthSessionToken()
+  const combo = useQuery(
+    (api as ApiAny).features.vote_aggregation_best_combo.computeBestCombos,
+    sessionToken && pollId ? { sessionToken, pollId } : 'skip',
+  ) as BestComboResult | null | undefined
+
+  return {
+    combo: combo ?? null,
+    isLoading: !!sessionToken && combo === undefined,
+  }
 }
 
 export function useSubmitVote(): {
   submitVote: (pollId: string, votes: Record<string, VoteType>) => Promise<void>
   isLoading: boolean
 } {
+  const sessionToken = useAuthSessionToken()
+  const { user } = useAuthUser()
+  const submitMutation = useMutation((api as ApiAny).features.vote_aggregation_best_combo.submitVote)
   const [isLoading, setIsLoading] = useState(false)
+
   return {
-    submitVote: async () => {
+    submitVote: async (pollId, votes) => {
+      if (!sessionToken) throw new Error('Not authenticated')
       setIsLoading(true)
-      await new Promise(r => setTimeout(r, 800))
-      setIsLoading(false)
+      try {
+        const voterName = user?.name ?? user?.username ?? user?.email ?? 'Anonymous'
+        // Include options marked yes or maybe; exclude no
+        const optionIds = Object.entries(votes)
+          .filter(([, type]) => type !== 'no')
+          .map(([id]) => id)
+        await submitMutation({ pollId, optionIds, voterName, sessionToken })
+      } finally {
+        setIsLoading(false)
+      }
     },
     isLoading,
   }
