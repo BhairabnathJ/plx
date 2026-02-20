@@ -1,15 +1,19 @@
 import type { SummaryGenerationResult } from '@/types'
-import { MOCK_SUMMARY } from '@/fixtures'
-
-// STUB: Replace with real fetch calls to Convex Actions. Signature stays the same.
+import { callLlmAction, llmActions } from './llmClient'
 
 export async function generateSummary(
-  _sessionId: string,
-  _tone: string
+  sessionId: string,
+  tone: string,
 ): Promise<SummaryGenerationResult> {
-  await new Promise(r => setTimeout(r, 1500))
+  const res = await callLlmAction<{
+    text: string
+    model: string
+  }>(llmActions.generateSummaryDraft, {
+    voteSummary: `Session ${sessionId} summary tone=${tone}`,
+  })
+
   return {
-    text: MOCK_SUMMARY.draftText,
-    model: MOCK_SUMMARY.model ?? 'meta-llama/llama-3.3-70b-instruct:free',
+    text: res.data.text,
+    model: res.meta.model,
   }
 }
