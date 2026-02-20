@@ -24,7 +24,15 @@ export function SessionShell() {
     )
   }
 
-  if (!session) return null
+  if (!session) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8">
+        <div className="card p-5 text-sm text-neutral-600">
+          Session not found or no longer available.
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col min-h-0">

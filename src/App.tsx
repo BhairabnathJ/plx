@@ -8,6 +8,7 @@ import { LandingPage } from '@/pages/Landing/LandingPage'
 import { AuthPage } from '@/pages/Auth/AuthPage'
 import { DashboardPage } from '@/pages/Dashboard/DashboardPage'
 import { SessionsPage } from '@/pages/Sessions/SessionsPage'
+import { SessionHubPage } from '@/pages/Session/Hub/SessionHubPage'
 import { ContextPage } from '@/pages/Session/ContextTab/ContextPage'
 import { ConstraintsPage } from '@/pages/Session/ConstraintsTab/ConstraintsPage'
 import { PollBuilderPage } from '@/pages/Session/PollBuilderTab/PollBuilderPage'
@@ -55,8 +56,9 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <Navigate to="context" replace />,
+            element: <SessionHubPage />,
           },
+          { path: 'overview', element: <SessionHubPage /> },
           { path: 'context', element: <ContextPage /> },
           { path: 'constraints', element: <ConstraintsPage /> },
           { path: 'poll-builder', element: <PollBuilderPage /> },
