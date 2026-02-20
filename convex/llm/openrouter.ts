@@ -1,5 +1,20 @@
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const DEFAULT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+export const PRIMARY_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+export const FALLBACK_MODELS = [
+  "meta-llama/llama-3.1-8b-instruct:free",
+  "mistralai/mistral-7b-instruct:free",
+] as const;
+
+function assertFreeModel(model: string) {
+  if (!model.endsWith(":free")) {
+    throw new Error(`Non-free model configured in free-only mode: ${model}`);
+  }
+}
+
+assertFreeModel(PRIMARY_MODEL);
+for (const model of FALLBACK_MODELS) {
+  assertFreeModel(model);
+}
 
 type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -17,6 +32,9 @@ export async function callOpenRouterJSON<T>(args: {
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
+      const model = args.model ?? PRIMARY_MODEL;
+      assertFreeModel(model);
+
       const messages: ChatMessage[] = [
         { role: "system", content: args.systemPrompt },
         { role: "user", content: args.userPrompt },
@@ -29,7 +47,7 @@ export async function callOpenRouterJSON<T>(args: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: args.model ?? DEFAULT_MODEL,
+          model,
           temperature: args.temperature ?? 0.2,
           max_tokens: args.maxTokens ?? 1200,
           response_format: { type: "json_object" },
@@ -53,7 +71,7 @@ export async function callOpenRouterJSON<T>(args: {
 
       return {
         data: JSON.parse(content) as T,
-        model: payload.model ?? args.model ?? DEFAULT_MODEL,
+        model: payload.model ?? model,
       };
     } catch (error) {
       lastError = error as Error;
