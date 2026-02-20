@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Plus, Wand2, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { Input } from '@/components/primitives/Input'
 import { OptionPill } from '@/components/domain/OptionPill'
 import { SkeletonCard } from '@/components/primitives/Skeleton'
-import { usePollOptions, useUpdatePollOption, useAddPollOption } from '@/services/convex/polls'
+import { usePoll, usePollOptions, useUpdatePollOption, useAddPollOption } from '@/services/convex/polls'
 import { POLL_OPTION_LIMITS } from '@/types'
 import type { PollDimension, PollOption } from '@/types'
 import { cn } from '@/lib/cn'
@@ -26,7 +26,8 @@ const DIMENSION_CONFIG: Record<PollDimension, {
 
 export function PollBuilderPage() {
   const { sessionId = '' } = useParams()
-  const { bundle, isLoading } = usePollOptions(sessionId === 'session-1' ? 'poll-1' : '')
+  const { poll } = usePoll(sessionId)
+  const { bundle, isLoading } = usePollOptions(poll?.id ?? '')
   const { updateOption } = useUpdatePollOption()
   const { addOption } = useAddPollOption()
 
@@ -34,6 +35,17 @@ export function PollBuilderPage() {
   const [addingDimension, setAddingDimension] = useState<PollDimension | null>(null)
   const [newOptionLabel, setNewOptionLabel] = useState('')
   const [generating, setGenerating] = useState(false)
+
+  const allOptions = useMemo(() => {
+    if (!bundle) return []
+    return [...bundle.dates, ...bundle.times, ...bundle.places, ...bundle.before, ...bundle.after]
+  }, [bundle])
+
+  useEffect(() => {
+    if (!bundle) return
+    const active = allOptions.filter((opt) => opt.isActive).map((opt) => opt.id)
+    setSelectedIds(new Set(active))
+  }, [bundle, allOptions])
 
   if (isLoading) return <div className="p-6"><SkeletonCard count={4} /></div>
 
@@ -73,8 +85,16 @@ export function PollBuilderPage() {
 
   const handleGenerate = async () => {
     setGenerating(true)
-    await new Promise(r => setTimeout(r, 1500))
+    await new Promise(r => setTimeout(r, 400))
     setGenerating(false)
+  }
+
+  const handleApplySelection = async () => {
+    if (!bundle) return
+    const updates = allOptions.map((option) =>
+      updateOption(option.id, { isActive: selectedIds.has(option.id) }),
+    )
+    await Promise.all(updates)
   }
 
   const dimensions: PollDimension[] = ['date', 'time', 'place', 'before', 'after']
@@ -85,20 +105,26 @@ export function PollBuilderPage() {
         <div>
           <h2 className="text-lg font-bold text-neutral-900">Poll Builder</h2>
           <p className="text-sm text-neutral-500 mt-1">
-            Curate your options. Select which to include in the poll, or add new ones.
+            Curate your options. Toggle what should be included in the published poll.
           </p>
         </div>
-        {!bundle && (
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set(allOptions.map((o) => o.id)))}>
+            Select all
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+            Clear all
+          </Button>
           <Button
             variant="primary"
             size="sm"
             iconLeft={<Wand2 size={14} />}
             loading={generating}
-            onClick={handleGenerate}
+            onClick={handleApplySelection}
           >
-            Generate options
+            Apply selection
           </Button>
-        )}
+        </div>
       </div>
 
       {!bundle ? (
@@ -157,14 +183,14 @@ export function PollBuilderPage() {
 
                 {/* Pills */}
                 <div className="flex flex-wrap gap-2">
-                  {options.map(opt => (
-                    <OptionPill
-                      key={opt.id}
-                      label={opt.label}
-                      selected={selectedIds.size === 0 || selectedIds.has(opt.id)}
-                      onToggle={() => toggleOption(opt.id)}
-                      onRemove={() => updateOption(opt.id, {})}
-                      onRename={label => updateOption(opt.id, { label })}
+                {options.map(opt => (
+                  <OptionPill
+                    key={opt.id}
+                    label={opt.label}
+                    selected={selectedIds.has(opt.id)}
+                    onToggle={() => toggleOption(opt.id)}
+                    onRemove={() => updateOption(opt.id, {})}
+                    onRename={label => updateOption(opt.id, { label })}
                     />
                   ))}
                 </div>

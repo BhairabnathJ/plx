@@ -8,7 +8,7 @@ import { useClipboard } from '@/hooks/useClipboard'
 import { track } from '@/lib/telemetry'
 
 export function PollSharePage() {
-  const { sessionId = '' } = useParams()
+  const { groupId = '', sessionId = '' } = useParams()
   const { session } = useSession(sessionId)
   const { poll } = usePoll(sessionId)
   const { publishPoll, isLoading: publishing } = usePublishPoll()
@@ -17,7 +17,7 @@ export function PollSharePage() {
 
   const [pollUrl, setPollUrl] = useState<string | null>(
     poll?.status === 'published'
-      ? `${window.location.origin}/app/group-1/polls/${poll.id}?token=${poll.publishToken}`
+      ? `${window.location.origin}/app/${groupId}/polls/${poll.id}?token=${poll.publishToken}`
       : null
   )
 
@@ -29,7 +29,7 @@ export function PollSharePage() {
   }
 
   const waText = pollUrl
-    ? `Hey everyone! 👋\n\n${session?.title ?? 'Planning session'} — quick vote needed:\n\n${pollUrl}\n\nTakes 30 seconds, vote before we lose momentum! 🙏`
+    ? `Hey everyone! 👋\n\n${session?.title ?? 'Planning session'} — quick vote needed:\n\n${pollUrl}\n\nPlease vote when you can so we can lock this in. 🙏`
     : ''
 
   return (
