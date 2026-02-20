@@ -3,6 +3,7 @@ import { Send, Wand2, MessageSquareDashed } from 'lucide-react'
 import { Button } from '@/components/primitives/Button'
 import { MessageItem } from '@/components/domain/MessageItem'
 import { analyzeConsensus } from '@/services/api/live-chat'
+import { formatLlmError } from '@/services/api/llmClient'
 import { track } from '@/lib/telemetry'
 import type { ConsensusInsight } from '@/types'
 import { cn } from '@/lib/cn'
@@ -72,9 +73,9 @@ export function LiveChatPage() {
       if (result.consensusPoints.length || result.conflicts.length) {
         setInsight(result)
       }
-    } catch {
+    } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== loadingId))
-      addMessage({ variant: 'bot', content: 'Sorry, something went wrong. Try again.', timestamp: new Date() })
+      addMessage({ variant: 'bot', content: formatLlmError(err), timestamp: new Date() })
     } finally {
       setThinking(false)
     }
@@ -93,9 +94,9 @@ export function LiveChatPage() {
       setMessages(prev => prev.filter(m => m.id !== loadingId))
       addMessage({ variant: 'bot', content: result.nextStep, timestamp: new Date() })
       setInsight(result)
-    } catch {
+    } catch (err) {
       setMessages(prev => prev.filter(m => m.id !== loadingId))
-      addMessage({ variant: 'bot', content: 'Analysis failed. Try again.', timestamp: new Date() })
+      addMessage({ variant: 'bot', content: formatLlmError(err), timestamp: new Date() })
     } finally {
       setThinking(false)
     }

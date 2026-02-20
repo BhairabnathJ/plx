@@ -6,6 +6,7 @@ import { Textarea } from '@/components/primitives/Textarea'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useSession, useUpdateSessionStatus } from '@/services/convex/sessions'
 import { analyzeSession } from '@/services/api/session'
+import { formatLlmError } from '@/services/api/llmClient'
 import { track } from '@/lib/telemetry'
 
 export function ContextPage() {
@@ -29,8 +30,8 @@ export function ContextPage() {
       await analyzeSession(session.id, contextText)
       await updateStatus(session.id, 'analyzed')
       track.analysisTriggered(session.id)
-    } catch {
-      setError('Analysis failed. Check your connection and try again.')
+    } catch (err) {
+      setError(formatLlmError(err))
     } finally {
       setAnalyzing(false)
     }

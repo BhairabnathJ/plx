@@ -8,6 +8,7 @@ import { SkeletonBlock } from '@/components/primitives/Skeleton'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useSummary, useSaveSummaryDraft } from '@/services/convex/summaries'
 import { generateSummary } from '@/services/api/summary'
+import { formatLlmError } from '@/services/api/llmClient'
 import { useClipboard } from '@/hooks/useClipboard'
 import { track } from '@/lib/telemetry'
 import type { TonePreset } from '@/types'
@@ -39,8 +40,8 @@ export function SummaryPage() {
       const result = await generateSummary(sessionId, tone)
       setText(result.text)
       track.summaryGenerated(sessionId)
-    } catch {
-      setError('Failed to generate summary. Try again or edit manually.')
+    } catch (err) {
+      setError(formatLlmError(err))
     } finally {
       setGenerating(false)
     }
