@@ -1,15 +1,30 @@
-import type { SummaryGenerationResult } from '@/types'
-import { MOCK_SUMMARY } from '@/fixtures'
+import { useAction } from 'convex/react'
+import { useAuthSessionToken } from '@/services/convex/auth'
+import { api } from '../../../convex/_generated/api'
+import type { TonePreset } from '@/types'
 
-// STUB: Replace with real fetch calls to Convex Actions. Signature stays the same.
+type ApiAny = any
 
-export async function generateSummary(
-  _sessionId: string,
-  _tone: string
-): Promise<SummaryGenerationResult> {
-  await new Promise(r => setTimeout(r, 1500))
+export function useGenerateSummary(): {
+  generateSummary: (
+    sessionId: string,
+    tone: TonePreset,
+    voteSummary?: string
+  ) => Promise<{ text: string; model: string }>
+} {
+  const sessionToken = useAuthSessionToken()
+  const generateAction = useAction((api as ApiAny)['llm/actions'].generateSummaryDraft)
+
   return {
-    text: MOCK_SUMMARY.draftText,
-    model: MOCK_SUMMARY.model ?? 'meta-llama/llama-3.3-70b-instruct:free',
+    generateSummary: async (sessionId: string, tone: TonePreset, voteSummary = '') => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      const result = await generateAction({
+        sessionToken,
+        sessionId,
+        voteSummary: voteSummary || 'Generate a planning summary based on the group discussion and voting results.',
+        tone,
+      })
+      return { text: result.text, model: result.model }
+    },
   }
 }

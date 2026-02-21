@@ -7,7 +7,7 @@ import { Chip } from '@/components/primitives/Chip'
 import { SkeletonBlock } from '@/components/primitives/Skeleton'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useSummary, useSaveSummaryDraft } from '@/services/convex/summaries'
-import { generateSummary } from '@/services/api/summary'
+import { useGenerateSummary } from '@/services/api/summary'
 import { useClipboard } from '@/hooks/useClipboard'
 import { track } from '@/lib/telemetry'
 import type { TonePreset } from '@/types'
@@ -17,6 +17,7 @@ export function SummaryPage() {
   const { sessionId = '' } = useParams()
   const { summary } = useSummary(sessionId)
   const { saveDraft, isLoading: saving } = useSaveSummaryDraft()
+  const { generateSummary } = useGenerateSummary()
   const { copy, copied } = useClipboard()
 
   const [text, setText] = useState(summary?.finalText ?? summary?.draftText ?? '')

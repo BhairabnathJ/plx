@@ -5,13 +5,14 @@ import { Button } from '@/components/primitives/Button'
 import { Textarea } from '@/components/primitives/Textarea'
 import { ErrorState } from '@/components/feedback/ErrorState'
 import { useSession, useUpdateSessionStatus } from '@/services/convex/sessions'
-import { analyzeSession } from '@/services/api/session'
+import { useAnalyzeSession } from '@/services/api/session'
 import { track } from '@/lib/telemetry'
 
 export function ContextPage() {
   const { sessionId = '' } = useParams()
   const { session } = useSession(sessionId)
   const { updateStatus } = useUpdateSessionStatus()
+  const { analyzeSession } = useAnalyzeSession()
   const [additionalText, setAdditionalText] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
   const [error, setError] = useState<string | null>(null)

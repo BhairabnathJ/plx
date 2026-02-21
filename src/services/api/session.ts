@@ -1,30 +1,33 @@
-import type { ConstraintExtractionResult, PollOptionBundle } from '@/types'
-import { MOCK_CONSTRAINTS, MOCK_POLL_OPTION_BUNDLE } from '@/fixtures'
+import { useAction } from 'convex/react'
+import { useAuthSessionToken } from '@/services/convex/auth'
+import { api } from '../../../convex/_generated/api'
 
-// STUB: Replace with real fetch calls to Convex Actions. Signature stays the same.
+type ApiAny = any
 
-export async function analyzeSession(
-  _sessionId: string,
-  _contextText: string
-): Promise<ConstraintExtractionResult> {
-  // Simulate LLM latency
-  await new Promise(r => setTimeout(r, 2200))
+export function useAnalyzeSession(): {
+  analyzeSession: (sessionId: string, contextText: string) => Promise<void>
+} {
+  const sessionToken = useAuthSessionToken()
+  const analyzeAction = useAction((api as ApiAny)['llm/actions'].extractConstraints)
+
   return {
-    sessionId: _sessionId,
-    hardConstraints: MOCK_CONSTRAINTS
-      .filter(c => c.kind === 'hard')
-      .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
-    softPreferences: MOCK_CONSTRAINTS
-      .filter(c => c.kind === 'soft')
-      .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
-    mentions: MOCK_CONSTRAINTS
-      .filter(c => c.kind === 'mention')
-      .map(({ id: _id, sessionId: _sid, state: _st, ...rest }) => rest),
-    rawConfidence: 0.82,
+    analyzeSession: async (sessionId: string, contextText: string) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await analyzeAction({ sessionToken, sessionId, sessionText: contextText })
+    },
   }
 }
 
-export async function generateOptions(_sessionId: string): Promise<PollOptionBundle> {
-  await new Promise(r => setTimeout(r, 1800))
-  return MOCK_POLL_OPTION_BUNDLE
+export function useGeneratePollOptions(): {
+  generateOptions: (pollId: string, summaryContext: string) => Promise<void>
+} {
+  const sessionToken = useAuthSessionToken()
+  const generateAction = useAction((api as ApiAny)['llm/actions'].generatePollOptions)
+
+  return {
+    generateOptions: async (pollId: string, summaryContext: string) => {
+      if (!sessionToken) throw new Error('Not authenticated')
+      await generateAction({ sessionToken, pollId, summaryContext })
+    },
+  }
 }
